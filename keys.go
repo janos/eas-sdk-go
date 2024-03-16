@@ -7,10 +7,35 @@ package eas
 
 import (
 	"crypto/ecdsa"
+	"io"
+	"io/fs"
 
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
 func HexParsePrivateKey(h string) (*ecdsa.PrivateKey, error) {
 	return crypto.HexToECDSA(h)
+}
+
+func LoadEthereumKeyFile(fs fs.FS, filename, auth string) (*ecdsa.PrivateKey, error) {
+	f, err := fs.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	const maxFileLength = 1024
+
+	data, err := io.ReadAll(io.LimitReader(f, maxFileLength))
+	if err != nil {
+		return nil, err
+	}
+
+	k, err := keystore.DecryptKey(data, auth)
+	if err != nil {
+		return nil, err
+	}
+
+	return k.PrivateKey, nil
 }
