@@ -7,6 +7,7 @@ package eas
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 	"io"
 	"io/fs"
 
@@ -21,7 +22,7 @@ func HexParsePrivateKey(h string) (*ecdsa.PrivateKey, error) {
 func LoadEthereumKeyFile(fs fs.FS, filename, auth string) (*ecdsa.PrivateKey, error) {
 	f, err := fs.Open(filename)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("open file: %w", err)
 	}
 	defer f.Close()
 
@@ -29,12 +30,12 @@ func LoadEthereumKeyFile(fs fs.FS, filename, auth string) (*ecdsa.PrivateKey, er
 
 	data, err := io.ReadAll(io.LimitReader(f, maxFileLength))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read file: %w", err)
 	}
 
 	k, err := keystore.DecryptKey(data, auth)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decrypt key: %w", err)
 	}
 
 	return k.PrivateKey, nil

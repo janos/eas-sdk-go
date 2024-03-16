@@ -72,7 +72,7 @@ func NewClient(ctx context.Context, endpoint string, pk *ecdsa.PrivateKey, easCo
 	if backend == nil {
 		b, err := ethclient.DialContext(ctx, endpoint)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("connect to endpoint: %w", err)
 		}
 		backend = b
 	}
@@ -87,39 +87,39 @@ func NewClient(ctx context.Context, endpoint string, pk *ecdsa.PrivateKey, easCo
 
 	chainID, err := c.backend.ChainID(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get chain id: %w", err)
 	}
 	c.chainID = chainID
 
 	schemaRegistryContract, err := newSchemaRegistryContract(ctx, c)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("construct schema registry contract: %w", err)
 	}
 	c.SchemaRegistry = schemaRegistryContract
 
 	easContract, err := newEASContract(c)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("construct eas contract: %w", err)
 	}
 	c.EAS = easContract
 
 	return c, nil
 }
 
-func (c *Client) txOpts(ctx context.Context) (*bind.TransactOpts, error) {
+func (c *Client) newTxOpts(ctx context.Context) (*bind.TransactOpts, error) {
 	nonce, err := c.backend.PendingNonceAt(ctx, c.from)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get padding nonce: %w", err)
 	}
 
 	gasPrice, err := c.backend.SuggestGasPrice(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("suggest gas price: %w", err)
 	}
 
 	opts, err := bind.NewKeyedTransactorWithChainID(c.pk, c.chainID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("construct transactor: %w", err)
 	}
 	opts.Nonce = big.NewInt(int64(nonce))
 	opts.Value = big.NewInt(0)
@@ -178,7 +178,7 @@ func newParseProxy[I, O any](parse func(log types.Log) (I, error), constructor f
 			var o O
 			return o, err
 		}
-		return constructor(r), err
+		return constructor(r), nil
 	}
 }
 

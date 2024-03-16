@@ -7,6 +7,7 @@ package eas
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -23,7 +24,7 @@ type SchemaItem struct {
 func decodeAttestationValues(data []byte, schema string) ([]SchemaItem, error) {
 	var args abi.Arguments
 	var items []SchemaItem
-	for _, declaration := range strings.Split(schema, ",") {
+	for i, declaration := range strings.Split(schema, ",") {
 		declaration := strings.TrimSpace(declaration)
 		parts := strings.Fields(declaration)
 
@@ -39,7 +40,7 @@ func decodeAttestationValues(data []byte, schema string) ([]SchemaItem, error) {
 
 		t, err := abi.NewType(item.Type, "", nil)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("construct abi type argument %v: %w", i, err)
 		}
 
 		args = append(args, abi.Argument{
@@ -50,7 +51,7 @@ func decodeAttestationValues(data []byte, schema string) ([]SchemaItem, error) {
 
 	values, err := args.Unpack(data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unpack abi: %w", err)
 	}
 
 	for i, v := range values {
@@ -64,14 +65,14 @@ func decodeAttestationValues(data []byte, schema string) ([]SchemaItem, error) {
 func encodeAttestationValues(values []any) ([]byte, error) {
 	var args abi.Arguments
 
-	for _, v := range values {
+	for i, v := range values {
 		typeString, err := getTypeString(v, "")
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("get type string for argument %v: %w", i, err)
 		}
 		t, err := abi.NewType(typeString, "", nil)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("construct abi type argument %v: %w", i, err)
 		}
 		args = append(args, abi.Argument{
 			Type: t,
@@ -80,7 +81,7 @@ func encodeAttestationValues(values []any) ([]byte, error) {
 
 	data, err := args.Pack(values...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("pack abi: %w", err)
 	}
 	return data, nil
 }
@@ -88,14 +89,14 @@ func encodeAttestationValues(values []any) ([]byte, error) {
 func scanAttestationValues(data []byte, args ...any) error {
 	var abiArgs abi.Arguments
 
-	for _, arg := range args {
+	for i, arg := range args {
 		typeString, err := getTypeString(reflect.Indirect(reflect.ValueOf(arg)).Interface(), "")
 		if err != nil {
-			return err
+			return fmt.Errorf("get type string for argument %v: %w", i, err)
 		}
 		t, err := abi.NewType(typeString, "", nil)
 		if err != nil {
-			return err
+			return fmt.Errorf("construct abi type argument %v: %w", i, err)
 		}
 		abiArgs = append(abiArgs, abi.Argument{
 			Type: t,
@@ -104,7 +105,7 @@ func scanAttestationValues(data []byte, args ...any) error {
 
 	values, err := abiArgs.Unpack(data)
 	if err != nil {
-		return err
+		return fmt.Errorf("unpack abi: %w", err)
 	}
 
 	if len(args) != len(values) {
@@ -113,7 +114,7 @@ func scanAttestationValues(data []byte, args ...any) error {
 
 	for i, arg := range args {
 		if err := taint.Inject(values[i], arg); err != nil {
-			return err
+			return fmt.Errorf("inject value for argument %v: %w", i, err)
 		}
 	}
 

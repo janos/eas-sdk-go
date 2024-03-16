@@ -7,6 +7,7 @@ package eas
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -34,28 +35,28 @@ func newEASRevokedOffchain(r *contracts.EASRevokedOffchain) *EASRevokedOffchain 
 }
 
 func (c *EASContract) RevokeOffchain(ctx context.Context, uid UID) (*types.Transaction, WaitTx[EASRevokedOffchain], error) {
-	txOpts, err := c.client.txOpts(ctx)
+	txOpts, err := c.client.newTxOpts(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("construct transaction options: %w", err)
 	}
 
 	tx, err := c.contract.RevokeOffchain(txOpts, uid)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("call revoke offchain contract method: %w", err)
 	}
 
 	return tx, newWaitTx(tx, c.client, newParseProxy(c.contract.ParseRevokedOffchain, newEASRevokedOffchain)), nil
 }
 
 func (c *EASContract) MultiRevokeOffchain(ctx context.Context, schemaUID UID, uids []UID) (*types.Transaction, WaitTx[EASRevokedOffchain], error) {
-	txOpts, err := c.client.txOpts(ctx)
+	txOpts, err := c.client.newTxOpts(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("construct transaction options: %w", err)
 	}
 
 	tx, err := c.contract.MultiRevokeOffchain(txOpts, castUIDSlice(uids))
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("call multiple revoke offchain contract method: %w", err)
 	}
 	return tx, newWaitTx(tx, c.client, newParseProxy(c.contract.ParseRevokedOffchain, newEASRevokedOffchain)), nil
 }

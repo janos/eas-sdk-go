@@ -7,6 +7,7 @@ package eas
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"time"
 
@@ -102,14 +103,14 @@ func newAttestationRequestData(data []byte, o *AttestOptions) contracts.Attestat
 }
 
 func (c *EASContract) Attest(ctx context.Context, schemaUID UID, o *AttestOptions, values ...any) (*types.Transaction, WaitTx[EASAttested], error) {
-	txOpts, err := c.client.txOpts(ctx)
+	txOpts, err := c.client.newTxOpts(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("construct transaction options: %w", err)
 	}
 
 	data, err := encodeAttestationValues(values)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("encode attestation values: %w", err)
 	}
 
 	tx, err := c.contract.Attest(txOpts, contracts.AttestationRequest{
@@ -117,16 +118,16 @@ func (c *EASContract) Attest(ctx context.Context, schemaUID UID, o *AttestOption
 		Data:   newAttestationRequestData(data, o),
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("call attest contract method: %w", err)
 	}
 
 	return tx, newWaitTx(tx, c.client, newParseProxy(c.contract.ParseAttested, newEASAttested)), nil
 }
 
 func (c *EASContract) MultiAttest(ctx context.Context, schemaUID UID, o *AttestOptions, attestations ...[]any) (*types.Transaction, WaitTx[EASAttested], error) {
-	txOpts, err := c.client.txOpts(ctx)
+	txOpts, err := c.client.newTxOpts(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("construct transaction options: %w", err)
 	}
 
 	var data []contracts.AttestationRequestData
@@ -145,7 +146,7 @@ func (c *EASContract) MultiAttest(ctx context.Context, schemaUID UID, o *AttestO
 		},
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("call multi attest contract method: %w", err)
 	}
 
 	return tx, newWaitTx(tx, c.client, newParseProxy(c.contract.ParseAttested, newEASAttested)), nil

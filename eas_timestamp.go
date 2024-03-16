@@ -7,6 +7,7 @@ package eas
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -30,28 +31,28 @@ func newEASTimestamped(r *contracts.EASTimestamped) *EASTimestamped {
 }
 
 func (c *EASContract) Timestamp(ctx context.Context, data UID) (*types.Transaction, WaitTx[EASTimestamped], error) {
-	txOpts, err := c.client.txOpts(ctx)
+	txOpts, err := c.client.newTxOpts(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("construct transaction options: %w", err)
 	}
 
 	tx, err := c.contract.Timestamp(txOpts, data)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("call timestamp contract method: %w", err)
 	}
 
 	return tx, newWaitTx(tx, c.client, newParseProxy(c.contract.ParseTimestamped, newEASTimestamped)), nil
 }
 
 func (c *EASContract) MultiTimestamp(ctx context.Context, schemaUID UID, data []UID) (*types.Transaction, WaitTx[EASTimestamped], error) {
-	txOpts, err := c.client.txOpts(ctx)
+	txOpts, err := c.client.newTxOpts(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("construct transaction options: %w", err)
 	}
 
 	tx, err := c.contract.MultiTimestamp(txOpts, castUIDSlice(data))
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("call multi timestamp contract method: %w", err)
 	}
 	return tx, newWaitTx(tx, c.client, newParseProxy(c.contract.ParseTimestamped, newEASTimestamped)), nil
 }

@@ -7,6 +7,7 @@ package eas
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -58,19 +59,19 @@ func newSchemaRegistryContract(ctx context.Context, client *Client) (*SchemaRegi
 	if contractAddress == zeroAddress {
 		easContract, err := contracts.NewEAS(client.easContractAddress, client.backend)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("construct eas abi bindings: %w", err)
 		}
 
 		a, err := easContract.GetSchemaRegistry(&bind.CallOpts{Context: ctx})
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("get schema registry: %w", err)
 		}
 		contractAddress = a
 	}
 
 	contract, err := contracts.NewSchemaRegistry(contractAddress, client.backend)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("construct schema registry abi bindings: %w", err)
 	}
 
 	return &SchemaRegistryContract{
@@ -80,14 +81,14 @@ func newSchemaRegistryContract(ctx context.Context, client *Client) (*SchemaRegi
 }
 
 func (c *SchemaRegistryContract) Register(ctx context.Context, schema string, resolver common.Address, revocable bool) (*types.Transaction, WaitTx[SchemaRegistryRegistered], error) {
-	txOpts, err := c.client.txOpts(ctx)
+	txOpts, err := c.client.newTxOpts(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("construct transaction options: %w", err)
 	}
 
 	tx, err := c.contract.Register(txOpts, schema, resolver, revocable)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("call register contract method: %w", err)
 	}
 
 	return tx, newWaitTx(tx, c.client, newParseProxy(c.contract.ParseRegistered, newSchemaRegistryRegistered)), nil
@@ -98,7 +99,7 @@ func (c *SchemaRegistryContract) GetSchema(ctx context.Context, uid UID) (*Schem
 	if err != nil {
 		return nil, err
 	}
-	return newSchemaRecord(&r), err
+	return newSchemaRecord(&r), nil
 }
 
 type schemaRegistryRegisteredIterator struct {
@@ -118,6 +119,5 @@ func (c *SchemaRegistryContract) FilterRegistered(ctx context.Context, start uin
 }
 
 func (c *SchemaRegistryContract) WatchRegistered(ctx context.Context, start *uint64, sink chan<- *SchemaRegistryRegistered, uids []UID) (event.Subscription, error) {
-	proxy := newChanProxy(ctx, sink, newSchemaRegistryRegistered)
-	return c.contract.WatchRegistered(&bind.WatchOpts{Start: start, Context: ctx}, proxy, castUIDSlice(uids))
+	return c.contract.WatchRegistered(&bind.WatchOpts{Start: start, Context: ctx}, newChanProxy(ctx, sink, newSchemaRegistryRegistered), castUIDSlice(uids))
 }

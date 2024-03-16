@@ -7,6 +7,7 @@ package eas
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -53,9 +54,9 @@ func newRevocationRequestData(attestationUID UID, o *RevokeOptions) contracts.Re
 }
 
 func (c *EASContract) Revoke(ctx context.Context, schemaUID, attestationUID UID, o *RevokeOptions) (*types.Transaction, WaitTx[EASRevoked], error) {
-	txOpts, err := c.client.txOpts(ctx)
+	txOpts, err := c.client.newTxOpts(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("construct transaction options: %w", err)
 	}
 
 	tx, err := c.contract.Revoke(txOpts, contracts.RevocationRequest{
@@ -63,16 +64,16 @@ func (c *EASContract) Revoke(ctx context.Context, schemaUID, attestationUID UID,
 		Data:   newRevocationRequestData(attestationUID, o),
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("call revoke contract method: %w", err)
 	}
 
 	return tx, newWaitTx(tx, c.client, newParseProxy(c.contract.ParseRevoked, newEASRevoked)), nil
 }
 
 func (c *EASContract) MultiRevoke(ctx context.Context, schemaUID UID, o *AttestOptions, attestationUIDs []UID) (*types.Transaction, WaitTx[EASRevoked], error) {
-	txOpts, err := c.client.txOpts(ctx)
+	txOpts, err := c.client.newTxOpts(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("construct transaction options: %w", err)
 	}
 
 	var data []contracts.RevocationRequestData
@@ -87,7 +88,7 @@ func (c *EASContract) MultiRevoke(ctx context.Context, schemaUID UID, o *AttestO
 		},
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("call multi revoke contract method: %w", err)
 	}
 
 	return tx, newWaitTx(tx, c.client, newParseProxy(c.contract.ParseRevoked, newEASRevoked)), nil

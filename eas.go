@@ -6,6 +6,8 @@
 package eas
 
 import (
+	"fmt"
+
 	"resenje.org/eas/internal/contracts"
 )
 
@@ -17,7 +19,7 @@ type EASContract struct {
 func newEASContract(client *Client) (*EASContract, error) {
 	contract, err := contracts.NewEAS(client.easContractAddress, client.backend)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("construct eas abi bindings: %w", err)
 	}
 
 	return &EASContract{
