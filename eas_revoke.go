@@ -21,7 +21,7 @@ import (
 type EASRevoked struct {
 	Recipient common.Address
 	Attester  common.Address
-	Uid       UID
+	UID       UID
 	Schema    UID
 	Raw       types.Log
 }
@@ -30,7 +30,7 @@ func newEASRevoked(r *contracts.EASRevoked) *EASRevoked {
 	return &EASRevoked{
 		Recipient: r.Recipient,
 		Attester:  r.Attester,
-		Uid:       r.Uid,
+		UID:       r.Uid,
 		Schema:    r.Schema,
 		Raw:       r.Raw,
 	}

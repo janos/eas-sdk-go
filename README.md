@@ -19,16 +19,17 @@ import (
 	"resenje.org/eas"
 )
 
-const (
-	// network
-	endpointSepolia        = "https://ethereum-sepolia-rpc.publicnode.com/"
-	contractAddressSepolia = "0xC2679fBD37d54388Ce493F1DB75320D236e1815e"
-
-	// account
-	privateKeyHex = "933c798b990a6be3fb91ae2fd3b6593f61d6d478548091205ee948b1de9c9f19"
-)
-
 func main() {
+	const (
+		// network
+		endpointSepolia        = "https://ethereum-sepolia-rpc.publicnode.com/"
+		contractAddressSepolia = "0xC2679fBD37d54388Ce493F1DB75320D236e1815e"
+
+		// account
+		privateKeyHex = "933c798b990a6be3fb91ae2fd3b6593f61d6d478548091205ee948b1de9c9f19" // this is not a real user key
+		)
+	)
+
 	privateKey, err := eas.HexParsePrivateKey(privateKeyHex)
 	if err != nil {
 		log.Fatal(err)

@@ -12,13 +12,13 @@ git checkout e16a73137a9c8039e97938a9f34c5eb6cbdafb70 # compatible updates on se
 npm i
 
 # compile
-solcjs --base-path node_modules --include-path 'node_modules/@openzeppelin/contracts/utils' --include-path contracts --abi contracts/SchemaRegistry.sol -o abi --optimize-runs 2 --optimize
-solcjs --base-path node_modules --include-path 'node_modules/@openzeppelin/contracts/utils' --include-path contracts --abi contracts/EAS.sol -o abi --optimize-runs 2 --optimize
+solcjs --base-path node_modules --include-path 'node_modules/@openzeppelin/contracts/utils' --include-path contracts --abi contracts/SchemaRegistry.sol --bin contracts/SchemaRegistry.sol -o abi --optimize-runs 2 --optimize
+solcjs --base-path node_modules --include-path 'node_modules/@openzeppelin/contracts/utils' --include-path contracts --abi contracts/EAS.sol --bin contracts/EAS.sol -o abi --optimize-runs 2 --optimize
 
 # generate go code
-abigen --abi=abi/SchemaRegistry_sol_SchemaRegistry.abi --pkg=contracts --type=SchemaRegistry --out=SchemaRegistry_sol_SchemaRegistry.go
-abigen --abi=abi/EAS_sol_EAS.abi --pkg=contracts --type=EAS --out=EAS_sol_EAS.go
+abigen --abi=abi/SchemaRegistry_sol_SchemaRegistry.abi --bin=abi/SchemaRegistry_sol_SchemaRegistry.bin --pkg=contracts --type=SchemaRegistry --out=schemaregistry.go
+abigen --abi=abi/EAS_sol_EAS.abi --bin=abi/EAS_sol_EAS.bin --pkg=contracts --type=EAS --out=EAS_sol_EAS.go --pkg=contracts --type=EAS --out=eas.go
 
 # copy generated go files
-cp SchemaRegistry_sol_SchemaRegistry.go EAS_sol_EAS.go $PATH_TO_GO_PROJECTS/resenje.org/eas/internal/contracts/.
+cp schemaregistry.go eas.go $PATH_TO_GO_PROJECTS/resenje.org/eas/internal/contracts/.
 ```

@@ -20,7 +20,7 @@ import (
 )
 
 type Attestation struct {
-	Uid            UID
+	UID            UID
 	Schema         UID
 	Time           time.Time
 	ExpirationTime time.Time
@@ -34,7 +34,7 @@ type Attestation struct {
 
 func newAttestation(a *contracts.Attestation) *Attestation {
 	return &Attestation{
-		Uid:            a.Uid,
+		UID:            a.Uid,
 		Schema:         a.Schema,
 		Time:           time.Unix(int64(a.Time), 0),
 		ExpirationTime: time.Unix(int64(a.ExpirationTime), 0),
@@ -58,7 +58,7 @@ func (a Attestation) ScanValues(fields ...any) error {
 type EASAttested struct {
 	Recipient common.Address
 	Attester  common.Address
-	Uid       UID
+	UID       UID
 	Schema    UID
 	Raw       types.Log
 }
@@ -67,7 +67,7 @@ func newEASAttested(r *contracts.EASAttested) *EASAttested {
 	return &EASAttested{
 		Recipient: r.Recipient,
 		Attester:  r.Attester,
-		Uid:       r.Uid,
+		UID:       r.Uid,
 		Schema:    r.Schema,
 		Raw:       r.Raw,
 	}

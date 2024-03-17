@@ -8,13 +8,13 @@ package eas
 import (
 	"context"
 	"crypto/ecdsa"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
 	"reflect"
 	"unsafe"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -22,20 +22,10 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-type UID [32]byte
-
-func HexDecodeUID(s string) UID {
-	return [32]byte(common.HexToHash(s))
-}
-
-func (u UID) String() string {
-	return "0x" + hex.EncodeToString(u[:])
-}
-
 type Backend interface {
 	bind.ContractBackend
 	bind.DeployBackend
-	ChainID(context.Context) (*big.Int, error)
+	ethereum.ChainIDReader
 }
 
 type Client struct {
@@ -106,6 +96,14 @@ func NewClient(ctx context.Context, endpoint string, pk *ecdsa.PrivateKey, easCo
 	return c, nil
 }
 
+func (c *Client) Backend() Backend {
+	return c.backend
+}
+
+func Ptr[T any](v T) *T {
+	return &v
+}
+
 func (c *Client) newTxOpts(ctx context.Context) (*bind.TransactOpts, error) {
 	nonce, err := c.backend.PendingNonceAt(ctx, c.from)
 	if err != nil {
@@ -125,6 +123,7 @@ func (c *Client) newTxOpts(ctx context.Context) (*bind.TransactOpts, error) {
 	opts.Value = big.NewInt(0)
 	opts.GasLimit = c.options.GasLimit // in units
 	opts.GasPrice = gasPrice
+	opts.Context = ctx
 
 	return opts, nil
 }

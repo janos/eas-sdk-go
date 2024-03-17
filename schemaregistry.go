@@ -18,7 +18,7 @@ import (
 )
 
 type SchemaRecord struct {
-	Uid       UID
+	UID       UID
 	Resolver  common.Address
 	Revocable bool
 	Schema    string
@@ -26,7 +26,7 @@ type SchemaRecord struct {
 
 func newSchemaRecord(r *contracts.SchemaRecord) *SchemaRecord {
 	return &SchemaRecord{
-		Uid:       UID(r.Uid),
+		UID:       UID(r.Uid),
 		Resolver:  r.Resolver,
 		Revocable: r.Revocable,
 		Schema:    r.Schema,
@@ -34,14 +34,14 @@ func newSchemaRecord(r *contracts.SchemaRecord) *SchemaRecord {
 }
 
 type SchemaRegistryRegistered struct {
-	Uid        UID
+	UID        UID
 	Registerer common.Address
 	Raw        types.Log
 }
 
 func newSchemaRegistryRegistered(r *contracts.SchemaRegistryRegistered) *SchemaRegistryRegistered {
 	return &SchemaRegistryRegistered{
-		Uid:        UID(r.Uid),
+		UID:        UID(r.Uid),
 		Registerer: r.Registerer,
 		Raw:        r.Raw,
 	}
