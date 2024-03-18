@@ -80,8 +80,12 @@ func newSchemaRegistryContract(ctx context.Context, client *Client) (*SchemaRegi
 	}, nil
 }
 
-func (c *SchemaRegistryContract) Register(ctx context.Context, schema string, resolver common.Address, revocable bool) (*types.Transaction, WaitTx[SchemaRegistryRegistered], error) {
-	txOpts, err := c.client.newTxOpts(ctx)
+func (c *SchemaRegistryContract) Version(ctx context.Context) (string, error) {
+	return c.contract.Version(&bind.CallOpts{Context: ctx})
+}
+
+func (c *SchemaRegistryContract) Register(ctx context.Context, opts TxOptions, schema string, resolver common.Address, revocable bool) (*types.Transaction, WaitTx[SchemaRegistryRegistered], error) {
+	txOpts, err := c.client.newTxOpts(ctx, opts)
 	if err != nil {
 		return nil, nil, fmt.Errorf("construct transaction options: %w", err)
 	}

@@ -16,22 +16,36 @@ import (
 	"resenje.org/eas/internal/contracts"
 )
 
+type Timestamp uint64
+
+func (t Timestamp) Time() time.Time {
+	return time.Unix(int64(t), 0)
+}
+
+func castTimestampSlice(s []Timestamp) []uint64 {
+	r := make([]uint64, 0, len(s))
+	for _, t := range s {
+		r = append(r, uint64(t))
+	}
+	return r
+}
+
 type EASTimestamped struct {
 	Data      UID
-	Timestamp time.Time
+	Timestamp Timestamp
 	Raw       types.Log
 }
 
 func newEASTimestamped(r *contracts.EASTimestamped) *EASTimestamped {
 	return &EASTimestamped{
 		Data:      r.Data,
-		Timestamp: time.Unix(int64(r.Timestamp), 0),
+		Timestamp: Timestamp(r.Timestamp),
 		Raw:       r.Raw,
 	}
 }
 
-func (c *EASContract) Timestamp(ctx context.Context, data UID) (*types.Transaction, WaitTx[EASTimestamped], error) {
-	txOpts, err := c.client.newTxOpts(ctx)
+func (c *EASContract) Timestamp(ctx context.Context, opts TxOptions, data UID) (*types.Transaction, WaitTx[EASTimestamped], error) {
+	txOpts, err := c.client.newTxOpts(ctx, opts)
 	if err != nil {
 		return nil, nil, fmt.Errorf("construct transaction options: %w", err)
 	}
@@ -44,8 +58,8 @@ func (c *EASContract) Timestamp(ctx context.Context, data UID) (*types.Transacti
 	return tx, newWaitTx(tx, c.client, newParseProxy(c.contract.ParseTimestamped, newEASTimestamped)), nil
 }
 
-func (c *EASContract) MultiTimestamp(ctx context.Context, schemaUID UID, data []UID) (*types.Transaction, WaitTx[EASTimestamped], error) {
-	txOpts, err := c.client.newTxOpts(ctx)
+func (c *EASContract) MultiTimestamp(ctx context.Context, opts TxOptions, data []UID) (*types.Transaction, WaitTx[EASTimestamped], error) {
+	txOpts, err := c.client.newTxOpts(ctx, opts)
 	if err != nil {
 		return nil, nil, fmt.Errorf("construct transaction options: %w", err)
 	}
@@ -57,12 +71,12 @@ func (c *EASContract) MultiTimestamp(ctx context.Context, schemaUID UID, data []
 	return tx, newWaitTx(tx, c.client, newParseProxy(c.contract.ParseTimestamped, newEASTimestamped)), nil
 }
 
-func (c *EASContract) GetTimestamp(ctx context.Context, data UID) (uint64, error) {
-	id, err := c.contract.GetTimestamp(&bind.CallOpts{Context: ctx}, data)
+func (c *EASContract) GetTimestamp(ctx context.Context, data UID) (Timestamp, error) {
+	timestamp, err := c.contract.GetTimestamp(&bind.CallOpts{Context: ctx}, data)
 	if err != nil {
 		return 0, err
 	}
-	return id, nil
+	return Timestamp(timestamp), nil
 }
 
 type easTimestampedIterator struct {
@@ -73,14 +87,14 @@ func (i *easTimestampedIterator) Value() EASTimestamped {
 	return *newEASTimestamped(i.Event)
 }
 
-func (c *EASContract) FilterTimestamped(ctx context.Context, start uint64, end *uint64, data [][32]byte, timestamp []uint64) (Iterator[EASTimestamped], error) {
-	it, err := c.contract.FilterTimestamped(&bind.FilterOpts{Start: start, End: end, Context: ctx}, data, timestamp)
+func (c *EASContract) FilterTimestamped(ctx context.Context, start uint64, end *uint64, data []UID, timestamps []Timestamp) (Iterator[EASTimestamped], error) {
+	it, err := c.contract.FilterTimestamped(&bind.FilterOpts{Start: start, End: end, Context: ctx}, castUIDSlice(data), castTimestampSlice(timestamps))
 	if err != nil {
 		return nil, err
 	}
 	return &easTimestampedIterator{*it}, nil
 }
 
-func (c *EASContract) WatchTimestamped(ctx context.Context, start *uint64, sink chan<- *EASTimestamped, data [][32]byte, timestamp []uint64) (event.Subscription, error) {
-	return c.contract.WatchTimestamped(&bind.WatchOpts{Start: start, Context: ctx}, newChanProxy(ctx, sink, newEASTimestamped), data, timestamp)
+func (c *EASContract) WatchTimestamped(ctx context.Context, start *uint64, sink chan<- *EASTimestamped, data []UID, timestamps []Timestamp) (event.Subscription, error) {
+	return c.contract.WatchTimestamped(&bind.WatchOpts{Start: start, Context: ctx}, newChanProxy(ctx, sink, newEASTimestamped), castUIDSlice(data), castTimestampSlice(timestamps))
 }

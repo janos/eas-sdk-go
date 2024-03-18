@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
-	"unsafe"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -20,6 +19,11 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+)
+
+var (
+	defaultGasFeeCap = big.NewInt(20_000_000_000) // 20 Gwei
+	defaultGasTipCap = big.NewInt(2_000_000_000)  // 2 Gwei
 )
 
 type Backend interface {
@@ -45,6 +49,8 @@ type Client struct {
 type Options struct {
 	SchemaRegistryContractAddress common.Address
 	GasLimit                      uint64
+	GasFeeCap                     *big.Int
+	GasTipCap                     *big.Int
 	Backend                       Backend
 }
 
@@ -104,28 +110,56 @@ func Ptr[T any](v T) *T {
 	return &v
 }
 
-func (c *Client) newTxOpts(ctx context.Context) (*bind.TransactOpts, error) {
+type TxOptions []TxOption
+
+type TxOption func(*bind.TransactOpts)
+
+func GasLimit(v uint64) TxOption {
+	return func(to *bind.TransactOpts) {
+		to.GasLimit = v
+	}
+}
+
+func GasFeeCap(v *big.Int) TxOption {
+	return func(to *bind.TransactOpts) {
+		to.GasFeeCap = v
+	}
+}
+
+func GasTipCap(v *big.Int) TxOption {
+	return func(to *bind.TransactOpts) {
+		to.GasTipCap = v
+	}
+}
+
+func (c *Client) newTxOpts(ctx context.Context, opts TxOptions) (*bind.TransactOpts, error) {
 	nonce, err := c.backend.PendingNonceAt(ctx, c.from)
 	if err != nil {
 		return nil, fmt.Errorf("get padding nonce: %w", err)
 	}
 
-	gasPrice, err := c.backend.SuggestGasPrice(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("suggest gas price: %w", err)
-	}
-
-	opts, err := bind.NewKeyedTransactorWithChainID(c.pk, c.chainID)
+	auth, err := bind.NewKeyedTransactorWithChainID(c.pk, c.chainID)
 	if err != nil {
 		return nil, fmt.Errorf("construct transactor: %w", err)
 	}
-	opts.Nonce = big.NewInt(int64(nonce))
-	opts.Value = big.NewInt(0)
-	opts.GasLimit = c.options.GasLimit // in units
-	opts.GasPrice = gasPrice
-	opts.Context = ctx
+	auth.Context = ctx
+	auth.Nonce = big.NewInt(int64(nonce))
+	auth.Value = big.NewInt(0)
+	auth.GasLimit = c.options.GasLimit
+	auth.GasFeeCap = defaultGasFeeCap
+	if c.options.GasFeeCap != nil {
+		auth.GasFeeCap = c.options.GasFeeCap
+	}
+	auth.GasTipCap = defaultGasTipCap
+	if c.options.GasTipCap != nil {
+		auth.GasTipCap = c.options.GasTipCap
+	}
 
-	return opts, nil
+	for _, o := range opts {
+		o(auth)
+	}
+
+	return auth, nil
 }
 
 type WaitTx[T any] func(ctx context.Context) (*T, error)
@@ -182,8 +216,11 @@ func newParseProxy[I, O any](parse func(log types.Log) (I, error), constructor f
 }
 
 func castUIDSlice(s []UID) [][32]byte {
-	header := unsafe.Slice(&s, len(s))
-	return *(*[][32]byte)(unsafe.Pointer(&header))
+	r := make([][32]byte, 0, len(s))
+	for _, u := range s {
+		r = append(r, u)
+	}
+	return r
 }
 
 func getTypeString(v any, suffix string) (string, error) {

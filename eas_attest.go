@@ -102,8 +102,8 @@ func newAttestationRequestData(data []byte, o *AttestOptions) contracts.Attestat
 	}
 }
 
-func (c *EASContract) Attest(ctx context.Context, schemaUID UID, o *AttestOptions, values ...any) (*types.Transaction, WaitTx[EASAttested], error) {
-	txOpts, err := c.client.newTxOpts(ctx)
+func (c *EASContract) Attest(ctx context.Context, opts TxOptions, schemaUID UID, o *AttestOptions, values ...any) (*types.Transaction, WaitTx[EASAttested], error) {
+	txOpts, err := c.client.newTxOpts(ctx, opts)
 	if err != nil {
 		return nil, nil, fmt.Errorf("construct transaction options: %w", err)
 	}
@@ -124,8 +124,8 @@ func (c *EASContract) Attest(ctx context.Context, schemaUID UID, o *AttestOption
 	return tx, newWaitTx(tx, c.client, newParseProxy(c.contract.ParseAttested, newEASAttested)), nil
 }
 
-func (c *EASContract) MultiAttest(ctx context.Context, schemaUID UID, o *AttestOptions, attestations ...[]any) (*types.Transaction, WaitTx[EASAttested], error) {
-	txOpts, err := c.client.newTxOpts(ctx)
+func (c *EASContract) MultiAttest(ctx context.Context, opts TxOptions, schemaUID UID, o *AttestOptions, attestations ...[]any) (*types.Transaction, WaitTx[EASAttested], error) {
+	txOpts, err := c.client.newTxOpts(ctx, opts)
 	if err != nil {
 		return nil, nil, fmt.Errorf("construct transaction options: %w", err)
 	}

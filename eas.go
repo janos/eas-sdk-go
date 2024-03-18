@@ -6,8 +6,10 @@
 package eas
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"resenje.org/eas/internal/contracts"
 )
 
@@ -26,4 +28,8 @@ func newEASContract(client *Client) (*EASContract, error) {
 		client:   client,
 		contract: contract,
 	}, nil
+}
+
+func (c *EASContract) Version(ctx context.Context) (string, error) {
+	return c.contract.Version(&bind.CallOpts{Context: ctx})
 }

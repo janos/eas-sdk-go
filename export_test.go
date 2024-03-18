@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -22,7 +23,7 @@ import (
 type DeployBackend interface {
 	bind.ContractBackend
 	bind.DeployBackend
-	ChainID(context.Context) (*big.Int, error)
+	ethereum.ChainIDReader
 }
 
 func DeployEAS(ctx context.Context, backend DeployBackend, pk *ecdsa.PrivateKey, registry common.Address) (common.Address, *types.Transaction, *contracts.EAS, WaitDeployment, error) {
@@ -82,16 +83,12 @@ func newTxOpts(ctx context.Context, backend DeployBackend, pk *ecdsa.PrivateKey)
 		return nil, fmt.Errorf("get padding nonce: %w", err)
 	}
 
-	gasPrice, err := backend.SuggestGasPrice(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("suggest gas price: %w", err)
-	}
-
+	opts.Context = ctx
 	opts.Nonce = big.NewInt(int64(nonce))
 	opts.Value = big.NewInt(0)
-	opts.GasLimit = 30000000
-	opts.GasPrice = gasPrice
-	opts.Context = ctx
+	opts.GasLimit = 30000000                    // in units
+	opts.GasFeeCap = big.NewInt(20_000_000_000) // 20 Gwei
+	opts.GasTipCap = big.NewInt(2_000_000_000)  // 2 Gwei
 
 	return opts, nil
 }

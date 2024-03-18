@@ -15,13 +15,23 @@ import (
 	"resenje.org/eas"
 )
 
+func TestSchemaRegistryContract_Version(t *testing.T) {
+	client, _ := newClient(t)
+	ctx := context.Background()
+
+	version, err := client.SchemaRegistry.Version(ctx)
+	assertNilError(t, err)
+
+	assertEqual(t, "version", version, "1.0.0")
+}
+
 func TestSchemaRegistryContract_Register(t *testing.T) {
 	client, backend := newClient(t)
 	ctx := context.Background()
 
 	schema := "byte32 uid, string secret"
 
-	_, wait, err := client.SchemaRegistry.Register(ctx, schema, common.Address{1}, true)
+	_, wait, err := client.SchemaRegistry.Register(ctx, nil, schema, common.Address{1}, true)
 	assertNilError(t, err)
 
 	backend.Commit()
@@ -56,7 +66,7 @@ func TestSchemaRegistryContract_FilterRegistered(t *testing.T) {
 	var uids []eas.UID
 
 	for _, schema := range schemas {
-		_, wait, err := client.SchemaRegistry.Register(ctx, schema, common.Address{}, true)
+		_, wait, err := client.SchemaRegistry.Register(ctx, nil, schema, common.Address{}, true)
 		assertNilError(t, err)
 
 		backend.Commit()
@@ -72,7 +82,7 @@ func TestSchemaRegistryContract_FilterRegistered(t *testing.T) {
 		assertNilError(t, err)
 		defer it.Close()
 
-		schemaCount := 0
+		count := 0
 
 		for it.Next() {
 			r := it.Value()
@@ -80,16 +90,16 @@ func TestSchemaRegistryContract_FilterRegistered(t *testing.T) {
 			s, err := client.SchemaRegistry.GetSchema(ctx, r.UID)
 			assertNilError(t, err)
 
-			assertEqual(t, "uid", s.UID, uids[schemaCount])
-			assertEqual(t, "schema", s.Schema, schemas[schemaCount])
+			assertEqual(t, "uid", s.UID, uids[count])
+			assertEqual(t, "schema", s.Schema, schemas[count])
 			assertEqual(t, "resolver", s.Resolver, common.Address{})
 			assertEqual(t, "revocable", s.Revocable, true)
 
-			schemaCount++
+			count++
 		}
 		assertNilError(t, it.Error())
 
-		assertEqual(t, "schema count", schemaCount, len(schemas))
+		assertEqual(t, "count", count, len(schemas))
 	})
 
 	t.Run("filter blocks", func(t *testing.T) {
@@ -98,7 +108,7 @@ func TestSchemaRegistryContract_FilterRegistered(t *testing.T) {
 		assertNilError(t, err)
 		defer it.Close()
 
-		schemaCount := 0
+		count := 0
 
 		for it.Next() {
 			r := it.Value()
@@ -106,16 +116,43 @@ func TestSchemaRegistryContract_FilterRegistered(t *testing.T) {
 			s, err := client.SchemaRegistry.GetSchema(ctx, r.UID)
 			assertNilError(t, err)
 
-			assertEqual(t, "uid", s.UID, uids[schemaCount+2])
-			assertEqual(t, "schema", s.Schema, schemas[schemaCount+2]) // ignore first two schemas
+			assertEqual(t, "uid", s.UID, uids[count+2])
+			assertEqual(t, "schema", s.Schema, schemas[count+2]) // ignore first two schemas
 			assertEqual(t, "resolver", s.Resolver, common.Address{})
 			assertEqual(t, "revocable", s.Revocable, true)
 
-			schemaCount++
+			count++
 		}
 		assertNilError(t, it.Error())
 
-		assertEqual(t, "schema count", schemaCount, 2)
+		assertEqual(t, "count", count, 2)
+	})
+
+	t.Run("filter uids", func(t *testing.T) {
+		it, err := client.SchemaRegistry.FilterRegistered(ctx, 0, nil, []eas.UID{uids[1], uids[3]})
+		assertNilError(t, err)
+		defer it.Close()
+
+		count := 0
+
+		wantUID := 1
+		for it.Next() {
+			r := it.Value()
+
+			s, err := client.SchemaRegistry.GetSchema(ctx, r.UID)
+			assertNilError(t, err)
+
+			assertEqual(t, "uid", s.UID, uids[wantUID])
+			assertEqual(t, "schema", s.Schema, schemas[wantUID])
+			assertEqual(t, "resolver", s.Resolver, common.Address{})
+			assertEqual(t, "revocable", s.Revocable, true)
+
+			count++
+			wantUID = 3
+		}
+		assertNilError(t, it.Error())
+
+		assertEqual(t, "count", count, 2)
 	})
 }
 
@@ -129,7 +166,7 @@ func TestSchemaRegistryContract_WatchRegistered(t *testing.T) {
 	assertNilError(t, err)
 	defer sub.Unsubscribe()
 
-	schemaCount := 0
+	count := 0
 
 	schemas := []string{
 		"bool ignore",
@@ -140,10 +177,10 @@ func TestSchemaRegistryContract_WatchRegistered(t *testing.T) {
 	}
 
 	go func() {
-		defer close(sink)
+		defer sub.Unsubscribe()
 
 		for _, schema := range schemas {
-			_, wait, err := client.SchemaRegistry.Register(ctx, schema, common.Address{}, true)
+			_, wait, err := client.SchemaRegistry.Register(ctx, nil, schema, common.Address{}, true)
 			if err != nil {
 				t.Error(err)
 			}
@@ -164,20 +201,20 @@ func TestSchemaRegistryContract_WatchRegistered(t *testing.T) {
 loop:
 	for {
 		select {
-		case r, ok := <-sink:
-			if !ok {
-				break loop
-			}
+		case r := <-sink:
 			s, err := client.SchemaRegistry.GetSchema(ctx, r.UID)
 			assertNilError(t, err)
 
 			assertEqual(t, "uid", s.UID, r.UID)
-			assertEqual(t, "schema", s.Schema, schemas[schemaCount])
+			assertEqual(t, "schema", s.Schema, schemas[count])
 			assertEqual(t, "resolver", s.Resolver, common.Address{})
 			assertEqual(t, "revocable", s.Revocable, true)
 
-			schemaCount++
-		case err := <-sub.Err():
+			count++
+		case err, ok := <-sub.Err():
+			if !ok {
+				break loop
+			}
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -188,5 +225,5 @@ loop:
 		}
 	}
 
-	assertEqual(t, "schema count", schemaCount, 5)
+	assertEqual(t, "count", count, 5)
 }

@@ -53,8 +53,8 @@ func newRevocationRequestData(attestationUID UID, o *RevokeOptions) contracts.Re
 	}
 }
 
-func (c *EASContract) Revoke(ctx context.Context, schemaUID, attestationUID UID, o *RevokeOptions) (*types.Transaction, WaitTx[EASRevoked], error) {
-	txOpts, err := c.client.newTxOpts(ctx)
+func (c *EASContract) Revoke(ctx context.Context, opts TxOptions, schemaUID, attestationUID UID, o *RevokeOptions) (*types.Transaction, WaitTx[EASRevoked], error) {
+	txOpts, err := c.client.newTxOpts(ctx, opts)
 	if err != nil {
 		return nil, nil, fmt.Errorf("construct transaction options: %w", err)
 	}
@@ -70,8 +70,8 @@ func (c *EASContract) Revoke(ctx context.Context, schemaUID, attestationUID UID,
 	return tx, newWaitTx(tx, c.client, newParseProxy(c.contract.ParseRevoked, newEASRevoked)), nil
 }
 
-func (c *EASContract) MultiRevoke(ctx context.Context, schemaUID UID, o *AttestOptions, attestationUIDs []UID) (*types.Transaction, WaitTx[EASRevoked], error) {
-	txOpts, err := c.client.newTxOpts(ctx)
+func (c *EASContract) MultiRevoke(ctx context.Context, opts TxOptions, schemaUID UID, attestationUIDs []UID) (*types.Transaction, WaitTx[EASRevoked], error) {
+	txOpts, err := c.client.newTxOpts(ctx, opts)
 	if err != nil {
 		return nil, nil, fmt.Errorf("construct transaction options: %w", err)
 	}

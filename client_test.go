@@ -13,9 +13,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/ethclient/simulated"
-	"github.com/ethereum/go-ethereum/node"
 
 	"resenje.org/eas"
 )
@@ -33,15 +31,11 @@ func newClient(t testing.TB) (*eas.Client, *simulated.Backend) {
 
 	address := crypto.PubkeyToAddress(privateKey.PublicKey)
 
-	sim := simulated.NewBackend(
-		types.GenesisAlloc{
-			address: {
-				Balance: balance,
-			},
+	sim := simulated.NewBackend(types.GenesisAlloc{
+		address: {
+			Balance: balance,
 		},
-		func(nodeConf *node.Config, ethConf *ethconfig.Config) {
-
-		})
+	})
 	t.Cleanup(func() {
 		if err := sim.Close(); err != nil {
 			t.Error(err)
