@@ -11,14 +11,22 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient/simulated"
 
 	"resenje.org/eas"
+	"resenje.org/eas/internal/deployment"
 )
 
-func newClient(t testing.TB) (*eas.Client, *simulated.Backend) {
+type Client struct {
+	*eas.Client
+	account common.Address
+	backend *simulated.Backend
+}
+
+func newClient(t testing.TB) *Client {
 	t.Helper()
 
 	ctx := context.Background()
@@ -29,10 +37,10 @@ func newClient(t testing.TB) (*eas.Client, *simulated.Backend) {
 	balance := new(big.Int)
 	balance.SetString("100000000000000000000", 10)
 
-	address := crypto.PubkeyToAddress(privateKey.PublicKey)
+	accountAddress := crypto.PubkeyToAddress(privateKey.PublicKey)
 
 	sim := simulated.NewBackend(types.GenesisAlloc{
-		address: {
+		accountAddress: {
 			Balance: balance,
 		},
 	})
@@ -45,7 +53,7 @@ func newClient(t testing.TB) (*eas.Client, *simulated.Backend) {
 	backend := sim.Client()
 
 	// deploy schema registry contract
-	_, _, _, wait, err := eas.DeploySchemaRegistry(ctx, backend, privateKey)
+	_, _, _, wait, err := deployment.DeploySchemaRegistry(ctx, backend, privateKey)
 	assertNilError(t, err)
 
 	sim.Commit()
@@ -54,7 +62,7 @@ func newClient(t testing.TB) (*eas.Client, *simulated.Backend) {
 	assertNilError(t, err)
 
 	// deploy eas contract
-	_, _, _, wait, err = eas.DeployEAS(ctx, backend, privateKey, schemaRegistryAddress)
+	_, _, _, wait, err = deployment.DeployEAS(ctx, backend, privateKey, schemaRegistryAddress)
 	assertNilError(t, err)
 
 	sim.Commit()
@@ -68,7 +76,11 @@ func newClient(t testing.TB) (*eas.Client, *simulated.Backend) {
 	})
 	assertNilError(t, err)
 
-	return c, sim
+	return &Client{
+		Client:  c,
+		account: accountAddress,
+		backend: sim,
+	}
 }
 
 func assertEqual[T any](t testing.TB, name string, got, want T) {

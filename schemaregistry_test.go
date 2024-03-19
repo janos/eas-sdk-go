@@ -16,7 +16,7 @@ import (
 )
 
 func TestSchemaRegistryContract_Version(t *testing.T) {
-	client, _ := newClient(t)
+	client := newClient(t)
 	ctx := context.Background()
 
 	version, err := client.SchemaRegistry.Version(ctx)
@@ -26,18 +26,20 @@ func TestSchemaRegistryContract_Version(t *testing.T) {
 }
 
 func TestSchemaRegistryContract_Register(t *testing.T) {
-	client, backend := newClient(t)
+	client := newClient(t)
 	ctx := context.Background()
 
 	schema := "byte32 uid, string secret"
 
-	_, wait, err := client.SchemaRegistry.Register(ctx, nil, schema, common.Address{1}, true)
+	_, wait, err := client.SchemaRegistry.Register(ctx, schema, common.Address{1}, true)
 	assertNilError(t, err)
 
-	backend.Commit()
+	client.backend.Commit()
 
 	r, err := wait(ctx)
 	assertNilError(t, err)
+
+	assertEqual(t, "registerer", r.Registerer, client.account)
 
 	s, err := client.SchemaRegistry.GetSchema(ctx, r.UID)
 	assertNilError(t, err)
@@ -49,7 +51,7 @@ func TestSchemaRegistryContract_Register(t *testing.T) {
 }
 
 func TestSchemaRegistryContract_FilterRegistered(t *testing.T) {
-	client, backend := newClient(t)
+	client := newClient(t)
 	ctx := context.Background()
 
 	blockNumber, err := client.Backend().(ethereum.BlockNumberReader).BlockNumber(ctx)
@@ -66,10 +68,10 @@ func TestSchemaRegistryContract_FilterRegistered(t *testing.T) {
 	var uids []eas.UID
 
 	for _, schema := range schemas {
-		_, wait, err := client.SchemaRegistry.Register(ctx, nil, schema, common.Address{}, true)
+		_, wait, err := client.SchemaRegistry.Register(ctx, schema, common.Address{}, true)
 		assertNilError(t, err)
 
-		backend.Commit()
+		client.backend.Commit()
 
 		r, err := wait(ctx)
 		assertNilError(t, err)
@@ -157,7 +159,7 @@ func TestSchemaRegistryContract_FilterRegistered(t *testing.T) {
 }
 
 func TestSchemaRegistryContract_WatchRegistered(t *testing.T) {
-	client, backend := newClient(t)
+	client := newClient(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -180,12 +182,12 @@ func TestSchemaRegistryContract_WatchRegistered(t *testing.T) {
 		defer sub.Unsubscribe()
 
 		for _, schema := range schemas {
-			_, wait, err := client.SchemaRegistry.Register(ctx, nil, schema, common.Address{}, true)
+			_, wait, err := client.SchemaRegistry.Register(ctx, schema, common.Address{}, true)
 			if err != nil {
 				t.Error(err)
 			}
 
-			backend.Commit()
+			client.backend.Commit()
 
 			if _, err := wait(ctx); err != nil {
 				t.Error(err)
@@ -226,4 +228,19 @@ loop:
 	}
 
 	assertEqual(t, "count", count, 5)
+}
+
+func newSchema(t *testing.T, client *Client, schema string) eas.UID {
+	t.Helper()
+	ctx := context.Background()
+
+	_, wait, err := client.SchemaRegistry.Register(ctx, schema, common.Address{}, true)
+	assertNilError(t, err)
+
+	client.backend.Commit()
+
+	r, err := wait(ctx)
+	assertNilError(t, err)
+
+	return r.UID
 }

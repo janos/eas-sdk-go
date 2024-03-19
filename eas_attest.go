@@ -102,8 +102,8 @@ func newAttestationRequestData(data []byte, o *AttestOptions) contracts.Attestat
 	}
 }
 
-func (c *EASContract) Attest(ctx context.Context, opts TxOptions, schemaUID UID, o *AttestOptions, values ...any) (*types.Transaction, WaitTx[EASAttested], error) {
-	txOpts, err := c.client.newTxOpts(ctx, opts)
+func (c *EASContract) Attest(ctx context.Context, schemaUID UID, o *AttestOptions, values ...any) (*types.Transaction, WaitTx[EASAttested], error) {
+	txOpts, err := c.client.newTxOpts(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("construct transaction options: %w", err)
 	}
@@ -118,14 +118,14 @@ func (c *EASContract) Attest(ctx context.Context, opts TxOptions, schemaUID UID,
 		Data:   newAttestationRequestData(data, o),
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("call attest contract method: %w", err)
+		return nil, nil, fmt.Errorf("call attest contract method: %w", c.unpackError(err))
 	}
 
 	return tx, newWaitTx(tx, c.client, newParseProxy(c.contract.ParseAttested, newEASAttested)), nil
 }
 
-func (c *EASContract) MultiAttest(ctx context.Context, opts TxOptions, schemaUID UID, o *AttestOptions, attestations ...[]any) (*types.Transaction, WaitTx[EASAttested], error) {
-	txOpts, err := c.client.newTxOpts(ctx, opts)
+func (c *EASContract) MultiAttest(ctx context.Context, schemaUID UID, o *AttestOptions, attestations ...[]any) (*types.Transaction, WaitTxMulti[EASAttested], error) {
+	txOpts, err := c.client.newTxOpts(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("construct transaction options: %w", err)
 	}
@@ -146,22 +146,26 @@ func (c *EASContract) MultiAttest(ctx context.Context, opts TxOptions, schemaUID
 		},
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("call multi attest contract method: %w", err)
+		return nil, nil, fmt.Errorf("call multi attest contract method: %w", c.unpackError(err))
 	}
 
-	return tx, newWaitTx(tx, c.client, newParseProxy(c.contract.ParseAttested, newEASAttested)), nil
+	return tx, newWaitTxMulti(tx, c.client, newParseProxy(c.contract.ParseAttested, newEASAttested)), nil
 }
 
 func (c *EASContract) GetAttestation(ctx context.Context, uid UID) (*Attestation, error) {
 	a, err := c.contract.GetAttestation(&bind.CallOpts{Context: ctx}, uid)
 	if err != nil {
-		return nil, err
+		return nil, c.unpackError(err)
 	}
 	return newAttestation(&a), nil
 }
 
 func (c *EASContract) IsAttestationValid(ctx context.Context, uid UID) (bool, error) {
-	return c.contract.IsAttestationValid(&bind.CallOpts{Context: ctx}, uid)
+	yes, err := c.contract.IsAttestationValid(&bind.CallOpts{Context: ctx}, uid)
+	if err != nil {
+		return false, c.unpackError(err)
+	}
+	return yes, nil
 }
 
 type easAttestedIterator struct {
@@ -175,11 +179,15 @@ func (i *easAttestedIterator) Value() EASAttested {
 func (c *EASContract) FilterAttested(ctx context.Context, start uint64, end *uint64, recipient []common.Address, attester []common.Address, schema []UID) (Iterator[EASAttested], error) {
 	it, err := c.contract.FilterAttested(&bind.FilterOpts{Start: start, End: end, Context: ctx}, recipient, attester, castUIDSlice(schema))
 	if err != nil {
-		return nil, err
+		return nil, c.unpackError(err)
 	}
 	return &easAttestedIterator{*it}, nil
 }
 
 func (c *EASContract) WatchAttested(ctx context.Context, start *uint64, sink chan<- *EASAttested, recipient []common.Address, attester []common.Address, schema []UID) (event.Subscription, error) {
-	return c.contract.WatchAttested(&bind.WatchOpts{Start: start, Context: ctx}, newChanProxy(ctx, sink, newEASAttested), recipient, attester, castUIDSlice(schema))
+	s, err := c.contract.WatchAttested(&bind.WatchOpts{Start: start, Context: ctx}, newChanProxy(ctx, sink, newEASAttested), recipient, attester, castUIDSlice(schema))
+	if err != nil {
+		return nil, c.unpackError(err)
+	}
+	return s, nil
 }

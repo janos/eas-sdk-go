@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
+	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -21,10 +22,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-var (
-	defaultGasFeeCap = big.NewInt(20_000_000_000) // 20 Gwei
-	defaultGasTipCap = big.NewInt(2_000_000_000)  // 2 Gwei
-)
+var ZeroTime = time.Unix(0, 0)
 
 type Backend interface {
 	bind.ContractBackend
@@ -34,7 +32,7 @@ type Backend interface {
 
 type Client struct {
 	backend            Backend
-	from               common.Address
+	account            common.Address
 	pk                 *ecdsa.PrivateKey
 	easContractAddress common.Address
 	options            *Options
@@ -75,7 +73,7 @@ func NewClient(ctx context.Context, endpoint string, pk *ecdsa.PrivateKey, easCo
 
 	c := &Client{
 		backend:            backend,
-		from:               crypto.PubkeyToAddress(*publicKeyECDSA),
+		account:            crypto.PubkeyToAddress(*publicKeyECDSA),
 		pk:                 pk,
 		easContractAddress: easContractAddress,
 		options:            o,
@@ -110,30 +108,8 @@ func Ptr[T any](v T) *T {
 	return &v
 }
 
-type TxOptions []TxOption
-
-type TxOption func(*bind.TransactOpts)
-
-func GasLimit(v uint64) TxOption {
-	return func(to *bind.TransactOpts) {
-		to.GasLimit = v
-	}
-}
-
-func GasFeeCap(v *big.Int) TxOption {
-	return func(to *bind.TransactOpts) {
-		to.GasFeeCap = v
-	}
-}
-
-func GasTipCap(v *big.Int) TxOption {
-	return func(to *bind.TransactOpts) {
-		to.GasTipCap = v
-	}
-}
-
-func (c *Client) newTxOpts(ctx context.Context, opts TxOptions) (*bind.TransactOpts, error) {
-	nonce, err := c.backend.PendingNonceAt(ctx, c.from)
+func (c *Client) newTxOpts(ctx context.Context) (*bind.TransactOpts, error) {
+	nonce, err := c.backend.PendingNonceAt(ctx, c.account)
 	if err != nil {
 		return nil, fmt.Errorf("get padding nonce: %w", err)
 	}
@@ -146,18 +122,8 @@ func (c *Client) newTxOpts(ctx context.Context, opts TxOptions) (*bind.TransactO
 	auth.Nonce = big.NewInt(int64(nonce))
 	auth.Value = big.NewInt(0)
 	auth.GasLimit = c.options.GasLimit
-	auth.GasFeeCap = defaultGasFeeCap
-	if c.options.GasFeeCap != nil {
-		auth.GasFeeCap = c.options.GasFeeCap
-	}
-	auth.GasTipCap = defaultGasTipCap
-	if c.options.GasTipCap != nil {
-		auth.GasTipCap = c.options.GasTipCap
-	}
-
-	for _, o := range opts {
-		o(auth)
-	}
+	auth.GasFeeCap = c.options.GasFeeCap
+	auth.GasTipCap = c.options.GasTipCap
 
 	return auth, nil
 }
@@ -171,7 +137,37 @@ func newWaitTx[T any](tx *types.Transaction, client *Client, parse func(log type
 			return nil, err
 		}
 
+		l := len(receipt.Logs)
+		if l == 0 {
+			return nil, fmt.Errorf("transaction %s without logs", tx.Hash())
+		}
+		if l > 1 {
+			return nil, fmt.Errorf("transaction %s without multiple logs %v", tx.Hash(), l)
+		}
+
 		return parse(*receipt.Logs[0])
+	}
+}
+
+type WaitTxMulti[T any] func(ctx context.Context) ([]T, error)
+
+func newWaitTxMulti[T any](tx *types.Transaction, client *Client, parse func(log types.Log) (*T, error)) WaitTxMulti[T] {
+	return func(ctx context.Context) ([]T, error) {
+		receipt, err := bind.WaitMined(ctx, client.backend, tx)
+		if err != nil {
+			return nil, err
+		}
+
+		s := make([]T, 0, len(receipt.Logs))
+		for i, l := range receipt.Logs {
+			v, err := parse(*l)
+			if err != nil {
+				return nil, fmt.Errorf("parse log %v: %w", i, err)
+			}
+			s = append(s, *v)
+		}
+
+		return s, nil
 	}
 }
 

@@ -11,7 +11,7 @@ import (
 )
 
 func TestEASContract_Version(t *testing.T) {
-	client, _ := newClient(t)
+	client := newClient(t)
 	ctx := context.Background()
 
 	version, err := client.EAS.Version(ctx)

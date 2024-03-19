@@ -15,15 +15,15 @@ import (
 )
 
 func TestEASContract_Timestamp(t *testing.T) {
-	client, backend := newClient(t)
+	client := newClient(t)
 	ctx := context.Background()
 
 	uid := eas.HexDecodeUID("0x00cf55814f6a9135f3458c52cb5cf8bc511e8f22b3e8688f0f52229bc12a4d15")
 
-	_, wait, err := client.EAS.Timestamp(ctx, nil, uid)
+	_, wait, err := client.EAS.Timestamp(ctx, uid)
 	assertNilError(t, err)
 
-	backend.Commit()
+	client.backend.Commit()
 
 	r, err := wait(ctx)
 	assertNilError(t, err)
@@ -35,15 +35,15 @@ func TestEASContract_Timestamp(t *testing.T) {
 }
 
 func TestEASContract_GetTimestamp(t *testing.T) {
-	client, backend := newClient(t)
+	client := newClient(t)
 	ctx := context.Background()
 
 	uid := eas.HexDecodeUID("0x00cf55814f6a9135f3458c52cb5cf8bc511e8f22b3e8688f0f52229bc12a4d15")
 
-	_, wait, err := client.EAS.Timestamp(ctx, nil, uid)
+	_, wait, err := client.EAS.Timestamp(ctx, uid)
 	assertNilError(t, err)
 
-	backend.Commit()
+	client.backend.Commit()
 
 	want, err := wait(ctx)
 	assertNilError(t, err)
@@ -55,7 +55,7 @@ func TestEASContract_GetTimestamp(t *testing.T) {
 }
 
 func TestEASContract_MultiTimestamp(t *testing.T) {
-	client, backend := newClient(t)
+	client := newClient(t)
 	ctx := context.Background()
 
 	uids := []eas.UID{
@@ -64,24 +64,24 @@ func TestEASContract_MultiTimestamp(t *testing.T) {
 		eas.HexDecodeUID("0x200ca4d156a9e8fcf8bcf55814f235f3458c52cb5cf5112b3f02fe86885529bc"),
 	}
 
-	_, wait, err := client.EAS.MultiTimestamp(ctx, nil, uids)
+	_, wait, err := client.EAS.MultiTimestamp(ctx, uids)
 	assertNilError(t, err)
 
-	backend.Commit()
+	client.backend.Commit()
 
 	r, err := wait(ctx)
 	assertNilError(t, err)
 
-	for _, uid := range uids {
+	for i, uid := range uids {
 		timestamp, err := client.EAS.GetTimestamp(ctx, uid)
 		assertNilError(t, err)
 
-		assertEqual(t, "timestamp", timestamp, r.Timestamp)
+		assertEqual(t, "timestamp", timestamp, r[i].Timestamp)
 	}
 }
 
 func TestEASContract_FilterRegistered(t *testing.T) {
-	client, backend := newClient(t)
+	client := newClient(t)
 	ctx := context.Background()
 
 	blockNumber, err := client.Backend().(ethereum.BlockNumberReader).BlockNumber(ctx)
@@ -100,10 +100,10 @@ func TestEASContract_FilterRegistered(t *testing.T) {
 	timestamps := make([]eas.Timestamp, 0, len(uids))
 
 	for _, u := range uids {
-		_, wait, err := client.EAS.Timestamp(ctx, nil, u)
+		_, wait, err := client.EAS.Timestamp(ctx, u)
 		assertNilError(t, err)
 
-		backend.Commit()
+		client.backend.Commit()
 
 		r, err := wait(ctx)
 		assertNilError(t, err)
@@ -218,7 +218,7 @@ func TestEASContract_FilterRegistered(t *testing.T) {
 }
 
 func TestSchemaEAS_WatchTimestamped(t *testing.T) {
-	client, backend := newClient(t)
+	client := newClient(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -242,12 +242,12 @@ func TestSchemaEAS_WatchTimestamped(t *testing.T) {
 		defer sub.Unsubscribe()
 
 		for _, uid := range uids {
-			_, wait, err := client.EAS.Timestamp(ctx, nil, uid)
+			_, wait, err := client.EAS.Timestamp(ctx, uid)
 			if err != nil {
 				t.Error(err)
 			}
 
-			backend.Commit()
+			client.backend.Commit()
 
 			if _, err := wait(ctx); err != nil {
 				t.Error(err)

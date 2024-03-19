@@ -3,7 +3,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package eas
+package deployment
 
 import (
 	"context"
@@ -76,9 +76,9 @@ func newTxOpts(ctx context.Context, backend DeployBackend, pk *ecdsa.PrivateKey)
 		return nil, errors.New("not a valid ecdsa public key")
 	}
 
-	from := crypto.PubkeyToAddress(*publicKeyECDSA)
+	account := crypto.PubkeyToAddress(*publicKeyECDSA)
 
-	nonce, err := backend.PendingNonceAt(ctx, from)
+	nonce, err := backend.PendingNonceAt(ctx, account)
 	if err != nil {
 		return nil, fmt.Errorf("get padding nonce: %w", err)
 	}
@@ -86,9 +86,6 @@ func newTxOpts(ctx context.Context, backend DeployBackend, pk *ecdsa.PrivateKey)
 	opts.Context = ctx
 	opts.Nonce = big.NewInt(int64(nonce))
 	opts.Value = big.NewInt(0)
-	opts.GasLimit = 30000000                    // in units
-	opts.GasFeeCap = big.NewInt(20_000_000_000) // 20 Gwei
-	opts.GasTipCap = big.NewInt(2_000_000_000)  // 2 Gwei
 
 	return opts, nil
 }

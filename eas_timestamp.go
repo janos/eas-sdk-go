@@ -44,37 +44,37 @@ func newEASTimestamped(r *contracts.EASTimestamped) *EASTimestamped {
 	}
 }
 
-func (c *EASContract) Timestamp(ctx context.Context, opts TxOptions, data UID) (*types.Transaction, WaitTx[EASTimestamped], error) {
-	txOpts, err := c.client.newTxOpts(ctx, opts)
+func (c *EASContract) Timestamp(ctx context.Context, data UID) (*types.Transaction, WaitTx[EASTimestamped], error) {
+	txOpts, err := c.client.newTxOpts(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("construct transaction options: %w", err)
 	}
 
 	tx, err := c.contract.Timestamp(txOpts, data)
 	if err != nil {
-		return nil, nil, fmt.Errorf("call timestamp contract method: %w", err)
+		return nil, nil, fmt.Errorf("call timestamp contract method: %w", c.unpackError(err))
 	}
 
 	return tx, newWaitTx(tx, c.client, newParseProxy(c.contract.ParseTimestamped, newEASTimestamped)), nil
 }
 
-func (c *EASContract) MultiTimestamp(ctx context.Context, opts TxOptions, data []UID) (*types.Transaction, WaitTx[EASTimestamped], error) {
-	txOpts, err := c.client.newTxOpts(ctx, opts)
+func (c *EASContract) MultiTimestamp(ctx context.Context, data []UID) (*types.Transaction, WaitTxMulti[EASTimestamped], error) {
+	txOpts, err := c.client.newTxOpts(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("construct transaction options: %w", err)
 	}
 
 	tx, err := c.contract.MultiTimestamp(txOpts, castUIDSlice(data))
 	if err != nil {
-		return nil, nil, fmt.Errorf("call multi timestamp contract method: %w", err)
+		return nil, nil, fmt.Errorf("call multi timestamp contract method: %w", c.unpackError(err))
 	}
-	return tx, newWaitTx(tx, c.client, newParseProxy(c.contract.ParseTimestamped, newEASTimestamped)), nil
+	return tx, newWaitTxMulti(tx, c.client, newParseProxy(c.contract.ParseTimestamped, newEASTimestamped)), nil
 }
 
 func (c *EASContract) GetTimestamp(ctx context.Context, data UID) (Timestamp, error) {
 	timestamp, err := c.contract.GetTimestamp(&bind.CallOpts{Context: ctx}, data)
 	if err != nil {
-		return 0, err
+		return 0, c.unpackError(err)
 	}
 	return Timestamp(timestamp), nil
 }
@@ -90,11 +90,15 @@ func (i *easTimestampedIterator) Value() EASTimestamped {
 func (c *EASContract) FilterTimestamped(ctx context.Context, start uint64, end *uint64, data []UID, timestamps []Timestamp) (Iterator[EASTimestamped], error) {
 	it, err := c.contract.FilterTimestamped(&bind.FilterOpts{Start: start, End: end, Context: ctx}, castUIDSlice(data), castTimestampSlice(timestamps))
 	if err != nil {
-		return nil, err
+		return nil, c.unpackError(err)
 	}
 	return &easTimestampedIterator{*it}, nil
 }
 
 func (c *EASContract) WatchTimestamped(ctx context.Context, start *uint64, sink chan<- *EASTimestamped, data []UID, timestamps []Timestamp) (event.Subscription, error) {
-	return c.contract.WatchTimestamped(&bind.WatchOpts{Start: start, Context: ctx}, newChanProxy(ctx, sink, newEASTimestamped), castUIDSlice(data), castTimestampSlice(timestamps))
+	s, err := c.contract.WatchTimestamped(&bind.WatchOpts{Start: start, Context: ctx}, newChanProxy(ctx, sink, newEASTimestamped), castUIDSlice(data), castTimestampSlice(timestamps))
+	if err != nil {
+		return nil, c.unpackError(err)
+	}
+	return s, nil
 }

@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"resenje.org/eas/internal/contracts"
 )
@@ -16,20 +17,35 @@ import (
 type EASContract struct {
 	client   *Client
 	contract *contracts.EAS
+	abi      *abi.ABI
 }
 
 func newEASContract(client *Client) (*EASContract, error) {
 	contract, err := contracts.NewEAS(client.easContractAddress, client.backend)
 	if err != nil {
-		return nil, fmt.Errorf("construct eas abi bindings: %w", err)
+		return nil, fmt.Errorf("construct abi bindings: %w", err)
+	}
+
+	abi, err := contracts.EASMetaData.GetAbi()
+	if err != nil {
+		return nil, fmt.Errorf("get abi: %w", err)
 	}
 
 	return &EASContract{
 		client:   client,
 		contract: contract,
+		abi:      abi,
 	}, nil
 }
 
+func (c *EASContract) unpackError(err error) error {
+	return unpackError(err, c.abi)
+}
+
 func (c *EASContract) Version(ctx context.Context) (string, error) {
-	return c.contract.Version(&bind.CallOpts{Context: ctx})
+	v, err := c.contract.Version(&bind.CallOpts{Context: ctx})
+	if err != nil {
+		return "", c.unpackError(err)
+	}
+	return v, nil
 }

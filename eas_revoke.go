@@ -53,8 +53,8 @@ func newRevocationRequestData(attestationUID UID, o *RevokeOptions) contracts.Re
 	}
 }
 
-func (c *EASContract) Revoke(ctx context.Context, opts TxOptions, schemaUID, attestationUID UID, o *RevokeOptions) (*types.Transaction, WaitTx[EASRevoked], error) {
-	txOpts, err := c.client.newTxOpts(ctx, opts)
+func (c *EASContract) Revoke(ctx context.Context, schemaUID, attestationUID UID, o *RevokeOptions) (*types.Transaction, WaitTx[EASRevoked], error) {
+	txOpts, err := c.client.newTxOpts(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("construct transaction options: %w", err)
 	}
@@ -64,14 +64,14 @@ func (c *EASContract) Revoke(ctx context.Context, opts TxOptions, schemaUID, att
 		Data:   newRevocationRequestData(attestationUID, o),
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("call revoke contract method: %w", err)
+		return nil, nil, fmt.Errorf("call revoke contract method: %w", c.unpackError(err))
 	}
 
 	return tx, newWaitTx(tx, c.client, newParseProxy(c.contract.ParseRevoked, newEASRevoked)), nil
 }
 
-func (c *EASContract) MultiRevoke(ctx context.Context, opts TxOptions, schemaUID UID, attestationUIDs []UID) (*types.Transaction, WaitTx[EASRevoked], error) {
-	txOpts, err := c.client.newTxOpts(ctx, opts)
+func (c *EASContract) MultiRevoke(ctx context.Context, schemaUID UID, attestationUIDs []UID) (*types.Transaction, WaitTxMulti[EASRevoked], error) {
+	txOpts, err := c.client.newTxOpts(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("construct transaction options: %w", err)
 	}
@@ -88,10 +88,10 @@ func (c *EASContract) MultiRevoke(ctx context.Context, opts TxOptions, schemaUID
 		},
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("call multi revoke contract method: %w", err)
+		return nil, nil, fmt.Errorf("call multi revoke contract method: %w", c.unpackError(err))
 	}
 
-	return tx, newWaitTx(tx, c.client, newParseProxy(c.contract.ParseRevoked, newEASRevoked)), nil
+	return tx, newWaitTxMulti(tx, c.client, newParseProxy(c.contract.ParseRevoked, newEASRevoked)), nil
 }
 
 type easRevokedIterator struct {
@@ -105,11 +105,15 @@ func (i *easRevokedIterator) Value() EASRevoked {
 func (c *EASContract) FilterRevoked(ctx context.Context, start uint64, end *uint64, recipient []common.Address, attester []common.Address, schema []UID) (Iterator[EASRevoked], error) {
 	it, err := c.contract.FilterRevoked(&bind.FilterOpts{Start: start, End: end, Context: ctx}, recipient, attester, castUIDSlice(schema))
 	if err != nil {
-		return nil, err
+		return nil, c.unpackError(err)
 	}
 	return &easRevokedIterator{*it}, nil
 }
 
 func (c *EASContract) WatchRevoked(ctx context.Context, start *uint64, sink chan<- *EASRevoked, recipient []common.Address, attester []common.Address, schema []UID) (event.Subscription, error) {
-	return c.contract.WatchRevoked(&bind.WatchOpts{Start: start, Context: ctx}, newChanProxy(ctx, sink, newEASRevoked), recipient, attester, castUIDSlice(schema))
+	s, err := c.contract.WatchRevoked(&bind.WatchOpts{Start: start, Context: ctx}, newChanProxy(ctx, sink, newEASRevoked), recipient, attester, castUIDSlice(schema))
+	if err != nil {
+		return nil, c.unpackError(err)
+	}
+	return s, nil
 }
