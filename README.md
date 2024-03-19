@@ -27,7 +27,6 @@ func main() {
 
 		// account
 		privateKeyHex = "933c798b990a6be3fb91ae2fd3b6593f61d6d478548091205ee948b1de9c9f19" // this is not a real user key
-		)
 	)
 
 	privateKey, err := eas.HexParsePrivateKey(privateKeyHex)
