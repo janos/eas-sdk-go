@@ -47,10 +47,6 @@ func newAttestation(a *contracts.Attestation) *Attestation {
 	}
 }
 
-func (a Attestation) Fields(schema string) ([]SchemaItem, error) {
-	return decodeAttestationValues(a.Data, schema)
-}
-
 func (a Attestation) ScanValues(fields ...any) error {
 	return scanAttestationValues(a.Data, fields...)
 }

@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"reflect"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
@@ -217,42 +216,4 @@ func castUIDSlice(s []UID) [][32]byte {
 		r = append(r, u)
 	}
 	return r
-}
-
-func getTypeString(v any, suffix string) (string, error) {
-	switch v.(type) {
-	case common.Address:
-		return "address" + suffix, nil
-	case string:
-		return "string" + suffix, nil
-	case bool:
-		return "bool" + suffix, nil
-	case [32]byte, UID:
-		return "bytes32" + suffix, nil
-	case []byte:
-		return "bytes" + suffix, nil
-	case uint8:
-		return "uint8" + suffix, nil
-	case uint16:
-		return "uint16" + suffix, nil
-	case uint32:
-		return "uint32" + suffix, nil
-	case uint64:
-		return "uint64" + suffix, nil
-	case *big.Int:
-		return "uint256" + suffix, nil
-	default:
-		t := reflect.TypeOf(v)
-		switch t.Kind() {
-		case reflect.Array:
-			e := reflect.New(t.Elem()).Interface()
-			return getTypeString(e, "[]"+suffix)
-		case reflect.Slice:
-			len := reflect.ValueOf(v).Len()
-			e := reflect.New(t.Elem()).Interface()
-			return getTypeString(e, fmt.Sprintf("[%v]", len)+suffix)
-		default:
-			return "", fmt.Errorf("unsupported type %T", v)
-		}
-	}
 }

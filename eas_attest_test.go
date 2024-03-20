@@ -16,7 +16,7 @@ func TestEASContract_Attest(t *testing.T) {
 	client := newClient(t)
 	ctx := context.Background()
 
-	schemaUID := newSchema(t, client, "string message")
+	schemaUID := registerSchema(t, client, "string message")
 
 	_, wait, err := client.EAS.Attest(ctx, schemaUID, &eas.AttestOptions{Revocable: true}, "Hello!")
 	assertNilError(t, err)
@@ -29,11 +29,79 @@ func TestEASContract_Attest(t *testing.T) {
 	assertEqual(t, "attester", r.Attester, client.account)
 }
 
+func TestEASContract_GetAttestation(t *testing.T) {
+	client := newClient(t)
+	ctx := context.Background()
+
+	schemaUID := registerSchema(t, client, "string message")
+
+	_, wait, err := client.EAS.Attest(ctx, schemaUID, &eas.AttestOptions{Revocable: true}, "Hello!")
+	assertNilError(t, err)
+
+	client.backend.Commit()
+
+	r, err := wait(ctx)
+	assertNilError(t, err)
+
+	a, err := client.EAS.GetAttestation(ctx, r.UID)
+	assertNilError(t, err)
+
+	assertEqual(t, "schema uid", a.Schema, schemaUID)
+	assertEqual(t, "attester", a.Attester, client.account)
+}
+
+func TestEASContract_GetAttestation_structured(t *testing.T) {
+	client := newClient(t)
+	ctx := context.Background()
+
+	type KV struct {
+		Key   string
+		Value string
+	}
+
+	type Schema struct {
+		ID      uint64
+		Map     []KV
+		Comment string
+	}
+
+	schemaUID := registerSchema(t, client, eas.MustNewSchema(Schema{}))
+
+	attestationValues := Schema{
+		ID: 3,
+		Map: []KV{
+			{"k1", "v1"},
+			{"k2", "v2"},
+		},
+		Comment: "Hey",
+	}
+
+	_, wait, err := client.EAS.Attest(ctx, schemaUID, nil, attestationValues)
+	assertNilError(t, err)
+
+	client.backend.Commit()
+
+	r, err := wait(ctx)
+	assertNilError(t, err)
+
+	a, err := client.EAS.GetAttestation(ctx, r.UID)
+	assertNilError(t, err)
+
+	assertEqual(t, "schema uid", a.Schema, schemaUID)
+	assertEqual(t, "attester", a.Attester, client.account)
+
+	var validationValues Schema
+	err = a.ScanValues(&validationValues)
+
+	assertNilError(t, err)
+	assertEqual(t, "data", validationValues, attestationValues)
+}
+
 func TestEASContract_MultiAttest(t *testing.T) {
 	client := newClient(t)
 	ctx := context.Background()
 
-	schemaUID := newSchema(t, client, "string message")
+	schemaUID := registerSchema(t, client, "string message")
 
 	schemas := [][]any{
 		{"one"},
@@ -60,13 +128,6 @@ func TestEASContract_MultiAttest(t *testing.T) {
 		assertEqual(t, "schema uid", e.Schema, schemaUID)
 		assertEqual(t, "attester", e.Attester, client.account)
 
-		fields, err := a.Fields("string message")
-		assertNilError(t, err)
-
-		assertEqual(t, "message", fields[0].Name, "message")
-		assertEqual(t, "message", fields[0].Type, "string")
-		assertEqual(t, "message", fields[0].Value, schemas[i][0])
-
 		var message string
 		err = a.ScanValues(&message)
 		assertNilError(t, err)
@@ -78,8 +139,9 @@ func TestEASContract_MultiAttest(t *testing.T) {
 	assertEqual(t, "count", count, len(schemas))
 }
 
-func newAttestation(t testing.TB, client *Client, schemaUID eas.UID, o *eas.AttestOptions, values ...any) eas.UID {
+func attest(t testing.TB, client *Client, schemaUID eas.UID, o *eas.AttestOptions, values ...any) eas.UID {
 	t.Helper()
+
 	ctx := context.Background()
 
 	_, wait, err := client.EAS.Attest(ctx, schemaUID, o, values...)

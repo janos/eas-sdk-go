@@ -230,8 +230,9 @@ loop:
 	assertEqual(t, "count", count, 5)
 }
 
-func newSchema(t *testing.T, client *Client, schema string) eas.UID {
+func registerSchema(t *testing.T, client *Client, schema string) eas.UID {
 	t.Helper()
+
 	ctx := context.Background()
 
 	_, wait, err := client.SchemaRegistry.Register(ctx, schema, common.Address{}, true)

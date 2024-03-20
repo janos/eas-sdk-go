@@ -18,9 +18,9 @@ func TestEASContract_Revoke(t *testing.T) {
 	client := newClient(t)
 	ctx := context.Background()
 
-	schemaUID := newSchema(t, client, "string message")
+	schemaUID := registerSchema(t, client, "string message")
 
-	attestationUID := newAttestation(t, client, schemaUID, &eas.AttestOptions{Revocable: true}, "Hello!")
+	attestationUID := attest(t, client, schemaUID, &eas.AttestOptions{Revocable: true}, "Hello!")
 
 	a, err := client.EAS.GetAttestation(ctx, attestationUID)
 	assertNilError(t, err)
@@ -55,11 +55,11 @@ func TestEASContract_MultiRevoke(t *testing.T) {
 	client := newClient(t)
 	ctx := context.Background()
 
-	schemaUID := newSchema(t, client, "string message")
+	schemaUID := registerSchema(t, client, "string message")
 
 	var attestationUIDs []eas.UID
 	for i := 0; i < 10; i++ {
-		attestationUIDs = append(attestationUIDs, newAttestation(t, client, schemaUID, &eas.AttestOptions{Revocable: true}, "Hello!"))
+		attestationUIDs = append(attestationUIDs, attest(t, client, schemaUID, &eas.AttestOptions{Revocable: true}, "Hello!"))
 	}
 
 	for _, uid := range attestationUIDs {
@@ -95,11 +95,11 @@ func TestEASContract_FilterRevoked(t *testing.T) {
 	client := newClient(t)
 	ctx := context.Background()
 
-	schemaUID := newSchema(t, client, "string message")
+	schemaUID := registerSchema(t, client, "string message")
 
 	var attestationUIDs []eas.UID
 	for i := 0; i < 10; i++ {
-		attestationUIDs = append(attestationUIDs, newAttestation(t, client, schemaUID, &eas.AttestOptions{Revocable: true}, "Hello!"))
+		attestationUIDs = append(attestationUIDs, attest(t, client, schemaUID, &eas.AttestOptions{Revocable: true}, "Hello!"))
 	}
 
 	for _, i := range []int{1, 3, 4, 6, 7} {
@@ -141,11 +141,11 @@ func TestEASContract_WatchRevoked(t *testing.T) {
 	client := newClient(t)
 	ctx := context.Background()
 
-	schemaUID := newSchema(t, client, "string message")
+	schemaUID := registerSchema(t, client, "string message")
 
 	var attestationUIDs []eas.UID
 	for i := 0; i < 10; i++ {
-		attestationUIDs = append(attestationUIDs, newAttestation(t, client, schemaUID, &eas.AttestOptions{Revocable: true}, "Hello!"))
+		attestationUIDs = append(attestationUIDs, attest(t, client, schemaUID, &eas.AttestOptions{Revocable: true}, "Hello!"))
 	}
 
 	sink := make(chan *eas.EASRevoked)
