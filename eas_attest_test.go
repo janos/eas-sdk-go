@@ -7,7 +7,9 @@ package eas_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
+	"time"
 
 	"resenje.org/eas"
 )
@@ -137,6 +139,97 @@ func TestEASContract_MultiAttest(t *testing.T) {
 	}
 
 	assertEqual(t, "count", count, len(schemas))
+}
+
+func TestEASContract_FilterAttested(t *testing.T) {
+	client := newClient(t)
+	ctx := context.Background()
+
+	schemaUID := registerSchema(t, client, "string message")
+
+	for i := 0; i < 10; i++ {
+		attest(t, client, schemaUID, &eas.AttestOptions{Revocable: true}, fmt.Sprintf("Hello %v!", i))
+	}
+
+	t.Run("all", func(t *testing.T) {
+		it, err := client.EAS.FilterAttested(ctx, 0, nil, nil, nil, nil)
+		assertNilError(t, err)
+		defer it.Close()
+
+		count := 0
+
+		for it.Next() {
+			r := it.Value()
+
+			a, err := client.EAS.GetAttestation(ctx, r.UID)
+			assertNilError(t, err)
+
+			var message string
+			a.ScanValues(&message)
+
+			assertEqual(t, "message", message, fmt.Sprintf("Hello %v!", count))
+
+			count++
+		}
+		assertNilError(t, it.Error())
+
+		assertEqual(t, "count", count, 10)
+	})
+}
+
+func TestEASContract_WatchAttested(t *testing.T) {
+	client := newClient(t)
+	ctx := context.Background()
+
+	schemaUID := registerSchema(t, client, "string message")
+
+	sink := make(chan *eas.EASAttested)
+	sub, err := client.EAS.WatchAttested(ctx, nil, sink, nil, nil, nil)
+	assertNilError(t, err)
+
+	count := 0
+
+	go func() {
+		defer sub.Unsubscribe()
+
+		for i := 0; i < 10; i++ {
+			attest(t, client, schemaUID, &eas.AttestOptions{Revocable: true}, fmt.Sprintf("Hello %v!", i))
+
+			select {
+			case <-time.After(100 * time.Millisecond):
+			case <-ctx.Done():
+			}
+		}
+	}()
+
+loop:
+	for {
+		select {
+		case r := <-sink:
+			a, err := client.EAS.GetAttestation(ctx, r.UID)
+			assertNilError(t, err)
+
+			var message string
+			a.ScanValues(&message)
+
+			assertEqual(t, "message", message, fmt.Sprintf("Hello %v!", count))
+
+			count++
+		case err, ok := <-sub.Err():
+			if !ok {
+				break loop
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+		case <-ctx.Done():
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	assertEqual(t, "count", count, 10)
 }
 
 func attest(t testing.TB, client *Client, schemaUID eas.UID, o *eas.AttestOptions, values ...any) eas.UID {
