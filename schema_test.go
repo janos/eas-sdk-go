@@ -15,7 +15,7 @@ func TestNewSchema(t *testing.T) {
 
 	type Record struct {
 		Key   eas.UID
-		Value []byte `json:"val"`
+		Value []byte `abi:"val"`
 	}
 
 	type Schema struct {
@@ -25,5 +25,5 @@ func TestNewSchema(t *testing.T) {
 
 	got, err := eas.NewSchema(Schema{})
 	assertNilError(t, err)
-	assertEqual(t, "schema", got, "string Message, (bytes32 Key, bytes val)[] Record")
+	assertEqual(t, "schema", got, "string Message, (bytes32 Key, bytes val)[] Records")
 }

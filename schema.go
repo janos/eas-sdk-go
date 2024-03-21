@@ -56,7 +56,7 @@ func stripWrappedBrackets(s string) string {
 		return s
 	}
 
-	return s[1 : l-2]
+	return s[1 : l-1]
 }
 
 func hasRedundantParentheses(s string) bool {
@@ -209,7 +209,7 @@ func getABINewTypeArguments(v any, ty, internalType string, components []abi.Arg
 }
 
 func abiArgumentNameFromTag(structTag reflect.StructTag) (keyName string) {
-	tag := structTag.Get("json")
+	tag := structTag.Get("abi")
 	if tag == "" {
 		return ""
 	}
