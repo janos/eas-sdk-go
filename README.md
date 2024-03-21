@@ -136,25 +136,29 @@ func main() {
 	log.Println("Schema:", schema.Schema)
 
 	// Attest a road trip on chain.
-	_, waitAttestation, err := c.EAS.Attest(ctx, schema.UID, &eas.AttestOptions{Revocable: true}, RoadTrip{
-		ID:           4242,
-		VIN:          "1FA6P8CF5L5100421",
-		VehicleOwner: "Richard Hammond",
-		Passengers: []Passenger{
-			{
-				Name:     "James May",
-				CanDrive: true,
-			},
-			{
-				Name:     "Jeremy Clarkson",
-				CanDrive: true,
-			},
-			{
-				Name:     "The Stig",
-				CanDrive: false,
+	_, waitAttestation, err := c.EAS.Attest(ctx,
+		schema.UID,
+		&eas.AttestOptions{Revocable: true},
+		RoadTrip{
+			ID:           4242,
+			VIN:          "1FA6P8CF5L5100421",
+			VehicleOwner: "Richard Hammond",
+			Passengers: []Passenger{
+				{
+					Name:     "James May",
+					CanDrive: true,
+				},
+				{
+					Name:     "Jeremy Clarkson",
+					CanDrive: true,
+				},
+				{
+					Name:     "The Stig",
+					CanDrive: false,
+				},
 			},
 		},
-	})
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
