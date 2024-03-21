@@ -75,9 +75,17 @@ func unpackError(err error, abi *abi.ABI) error {
 				if decodeErr != nil {
 					return fmt.Errorf("%w: %w", err, decodeErr)
 				}
-				return fmt.Errorf("%w: %w", err, unpackErrorData(abi, b))
+				contractErr := unpackErrorData(abi, b)
+				if contractErr != nil {
+					return fmt.Errorf("%w: %w", err, contractErr)
+				}
+				return err
 			case []byte:
-				return fmt.Errorf("%w: %w", err, unpackErrorData(abi, data))
+				contractErr := unpackErrorData(abi, data)
+				if contractErr != nil {
+					return fmt.Errorf("%w: %w", err, contractErr)
+				}
+				return err
 			}
 		}
 	}
@@ -111,7 +119,7 @@ func unpackError(err error, abi *abi.ABI) error {
 		}
 	}
 
-	return fmt.Errorf("%T %w", err, err)
+	return err
 }
 
 func unpackErrorData(abi *abi.ABI, data []byte) *ContractError {
