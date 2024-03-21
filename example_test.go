@@ -39,7 +39,8 @@ func ExampleEASContract_GetAttestation() {
 		log.Fatal(err)
 	}
 
-	log.Println("Attester", a.Attester, a.Time, a.Schema)
+	log.Println("Attestation UID", a.UID)
+	log.Println("Attestation Time", a.Time)
 
 	var schemaUID eas.UID
 	var name string
@@ -53,22 +54,28 @@ func ExampleEASContract_GetAttestation() {
 	log.Println("Name:", name)
 }
 
+type RoadTrip struct {
+	ID           uint64      `abi:"id"`
+	VIN          string      `abi:"vin"` // Vehicle Identification Number
+	VehicleOwner string      `abi:"vehicleOwner"`
+	Passengers   []Passenger `abi:"passengers"`
+}
+
+type Passenger struct {
+	Name     string `abi:"name"`
+	CanDrive bool   `abi:"canDrive"`
+}
+
+func (p Passenger) CanDriveString() string {
+	if p.CanDrive {
+		return "can drive"
+	}
+	return "cannot drive"
+}
+
+// Attest a road trip with a structured schema.
 func Example_structuredAttestation() {
 	ctx := context.Background()
-
-	// Attest a road trip by defining a schema.
-
-	type Passenger struct {
-		Name     string `abi:"name"`
-		CanDrive bool   `abi:"canDrive"`
-	}
-
-	type RoadTrip struct {
-		ID           uint64      `abi:"id"`
-		VIN          string      `abi:"vin"` // Vehicle Identification Number
-		VehicleOwner string      `abi:"vehicleOwner"`
-		Passengers   []Passenger `abi:"passengers"`
-	}
 
 	// Use a fake key here. Use your own funded key to be able to send transactions.
 	privateKey, err := eas.HexParsePrivateKey("a896e1f28a6453e8db4794f11ea185befd04c4e4f06790e37e8d1cc90a611948")
@@ -85,10 +92,11 @@ func Example_structuredAttestation() {
 	}
 
 	// Create the Schema on chain.
-	_, waitRegistration, err := c.SchemaRegistry.Register(ctx, eas.MustNewSchema(RoadTrip{}), common.Address{}, true)
+	tx, waitRegistration, err := c.SchemaRegistry.Register(ctx, eas.MustNewSchema(RoadTrip{}), common.Address{}, true)
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Println("Waiting schema registration transaction:", tx.Hash())
 	schemaRegistration, err := waitRegistration(ctx)
 	if err != nil {
 		log.Fatal(err)
@@ -103,7 +111,7 @@ func Example_structuredAttestation() {
 	log.Println("Schema:", schema.Schema)
 
 	// Attest a road trip on chain.
-	_, waitAttestation, err := c.EAS.Attest(ctx,
+	tx, waitAttestation, err := c.EAS.Attest(ctx,
 		schema.UID,
 		&eas.AttestOptions{Revocable: true},
 		RoadTrip{
@@ -129,6 +137,7 @@ func Example_structuredAttestation() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Println("Waiting attest transaction:", tx.Hash())
 	attestConfirmation, err := waitAttestation(ctx)
 	if err != nil {
 		log.Fatal(err)
@@ -152,13 +161,6 @@ func Example_structuredAttestation() {
 	log.Println("Vehicle Identification Number:", roadTrip.VIN)
 	log.Println("Vehicle owner:", roadTrip.VehicleOwner)
 	for i, p := range roadTrip.Passengers {
-		log.Printf("Passenger %v: %s (%s)", i, p.Name, formatDrivingAbility(p.CanDrive))
+		log.Printf("Passenger %v: %s (%s)", i, p.Name, p.CanDriveString())
 	}
-}
-
-func formatDrivingAbility(b bool) string {
-	if b {
-		return "can drive"
-	}
-	return "cannot drive"
 }

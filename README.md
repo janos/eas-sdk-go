@@ -18,39 +18,37 @@ import (
 	"log"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"resenje.org/eas"
 )
 
+var (
+	endpointSepolia        = "https://ethereum-sepolia-rpc.publicnode.com/"
+	contractAddressSepolia = common.HexToAddress("0xC2679fBD37d54388Ce493F1DB75320D236e1815e")
+)
+
 func main() {
-	const (
-		// network
-		endpointSepolia        = "https://ethereum-sepolia-rpc.publicnode.com/"
-		contractAddressSepolia = "0xC2679fBD37d54388Ce493F1DB75320D236e1815e"
+	ctx := context.Background()
 
-		// account
-		privateKeyHex = "933c798b990a6be3fb91ae2fd3b6593f61d6d478548091205ee948b1de9c9f19" // this is not a real user key
-	)
-
-	privateKey, err := eas.HexParsePrivateKey(privateKeyHex)
+	privateKey, err := crypto.GenerateKey()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	contractAddress := common.HexToAddress(contractAddressSepolia)
-
-	c, err := eas.NewClient(context.Background(), endpointSepolia, privateKey, contractAddress, nil)
+	c, err := eas.NewClient(ctx, endpointSepolia, privateKey, contractAddressSepolia, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	attestationUID := eas.HexDecodeUID("0xac812932f5cee90a457d57a9fbd7b142b21ba99b809f982bbf86947f295281ff")
 
-	a, err := c.EAS.GetAttestation(context.Background(), attestationUID)
+	a, err := c.EAS.GetAttestation(ctx, attestationUID)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	log.Println("Attester", a.Attester, a.Time, a.Schema)
+	log.Println("Attestation UID", a.UID)
+	log.Println("Attestation Time", a.Time)
 
 	var schemaUID eas.UID
 	var name string
@@ -70,6 +68,7 @@ func main() {
 Create a structured schema, make attestation and get attestation.
 
 ```go
+// Attest a road trip by defining a schema.
 package main
 
 import (
@@ -86,13 +85,6 @@ var (
 	contractAddressSepolia = common.HexToAddress("0xC2679fBD37d54388Ce493F1DB75320D236e1815e")
 )
 
-// Attest a road trip by defining a schema.
-
-type Passenger struct {
-	Name     string `abi:"name"`
-	CanDrive bool   `abi:"canDrive"`
-}
-
 type RoadTrip struct {
 	ID           uint64      `abi:"id"`
 	VIN          string      `abi:"vin"` // Vehicle Identification Number
@@ -100,6 +92,19 @@ type RoadTrip struct {
 	Passengers   []Passenger `abi:"passengers"`
 }
 
+type Passenger struct {
+	Name     string `abi:"name"`
+	CanDrive bool   `abi:"canDrive"`
+}
+
+func (p Passenger) CanDriveString() string {
+	if p.CanDrive {
+		return "can drive"
+	}
+	return "cannot drive"
+}
+
+// Attest a road trip by defining a schema.
 func main() {
 	ctx := context.Background()
 
@@ -118,10 +123,11 @@ func main() {
 	}
 
 	// Create the Schema on chain.
-	_, waitRegistration, err := c.SchemaRegistry.Register(ctx, eas.MustNewSchema(RoadTrip{}), common.Address{}, true)
+	tx, waitRegistration, err := c.SchemaRegistry.Register(ctx, eas.MustNewSchema(RoadTrip{}), common.Address{}, true)
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Println("Waiting schema registration transaction:", tx.Hash())
 	schemaRegistration, err := waitRegistration(ctx)
 	if err != nil {
 		log.Fatal(err)
@@ -136,7 +142,7 @@ func main() {
 	log.Println("Schema:", schema.Schema)
 
 	// Attest a road trip on chain.
-	_, waitAttestation, err := c.EAS.Attest(ctx,
+	tx, waitAttestation, err := c.EAS.Attest(ctx,
 		schema.UID,
 		&eas.AttestOptions{Revocable: true},
 		RoadTrip{
@@ -162,6 +168,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Println("Waiting attest transaction:", tx.Hash())
 	attestConfirmation, err := waitAttestation(ctx)
 	if err != nil {
 		log.Fatal(err)
@@ -185,15 +192,8 @@ func main() {
 	log.Println("Vehicle Identification Number:", roadTrip.VIN)
 	log.Println("Vehicle owner:", roadTrip.VehicleOwner)
 	for i, p := range roadTrip.Passengers {
-		log.Printf("Passenger %v: %s (%s)", i, p.Name, formatDrivingAbility(p.CanDrive))
+		log.Printf("Passenger %v: %s (%s)", i, p.Name, p.CanDriveString())
 	}
-}
-
-func formatDrivingAbility(b bool) string {
-	if b {
-		return "can drive"
-	}
-	return "cannot drive"
 }
 ```
 
