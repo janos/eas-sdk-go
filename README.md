@@ -1,8 +1,8 @@
 # Ethereum Attestation Service - Go SDK
 
-[![Go](https://github.com/janos/eas/workflows/Go/badge.svg)](https://github.com/janos/eas/actions)
+[![Go](https://github.com/janos/eas-sdk-go/workflows/Go/badge.svg)](https://github.com/janos/eas-sdk-go/actions)
 [![PkgGoDev](https://pkg.go.dev/badge/resenje.org/eas)](https://pkg.go.dev/resenje.org/eas)
-[![NewReleases](https://newreleases.io/badge.svg)](https://newreleases.io/github/janos/eas)
+[![NewReleases](https://newreleases.io/badge.svg)](https://newreleases.io/github/janos/eas-sdk-go)
 
 This repository contains the Ethereum Attestation Service SDK for the Go programming language, used to interact with the Ethereum Attestation Service Protocol.
 

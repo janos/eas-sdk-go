@@ -16,6 +16,6 @@ Ethereum Attestation Service Go client follows semantic versioning. New function
 Any code which is complete, tested, reviewed, and merged to master can be released.
 
 1. Make a pull request with changes.
-2. Once the pull request has been merged, visit [https://github.com/janos/eas-go/releases](https://github.com/janos/eas-go/release) and click `Draft a new release`.
+2. Once the pull request has been merged, visit [https://github.com/janos/eas-sdk-go/releases](https://github.com/janos/eas-sdk-go/release) and click `Draft a new release`.
 3. Update the `Tag version` and `Release title` field with the new Ethereum Attestation Service Go client version. Be sure the version has a `v` prefixed in both places, e.g. `v1.25.0`.
 4. Publish the release.
