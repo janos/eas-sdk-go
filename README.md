@@ -6,7 +6,62 @@
 
 This repository contains the Ethereum Attestation Service SDK for the Go programming language, used to interact with the Ethereum Attestation Service Protocol.
 
-## Example
+[Ethereum Attestation Service](https://attest.sh/) (EAS) is an open-source infrastructure public good for making attestations onchain or offchain.
+
+Go SDK interacts with [EAS Smart Contracts](https://github.com/ethereum-attestation-service/eas-contracts) deployed on different EVM-compatible blockchains using smart contract bindings. The list off deployed contracts could be found in [EAS Contracts README file](https://github.com/ethereum-attestation-service/eas-contracts?tab=readme-ov-file#deployments). EAS contract address for a desired network in that list should be passed as an argument to the client constructor `eas.NewCLient`.
+
+## Installing the Go EAS SDK
+
+Run `go get resenje.org/eas` from command line in your Go module directory.
+
+## Usage
+
+Please refer to the generated package documentation on <https://pkg.go.dev/resenje.org/eas>, examples bellow and, of course, tests and code in this repository as the last resource of open source projects.
+
+## Schemas
+
+Attestations are structured by defining and registering Schemas. Schemas follow the Solidity ABI for acceptable types. Below is a list of current Solidity types and corresponding Go types.
+
+| Go type                                    | Solidity type                               |
+|--------------------------------------------|---------------------------------------------|
+| `common.Address`                           | `address`                                   |
+| `string`                                   | `string`                                    |
+| `bool`                                     | `bool`                                      |
+| `[32]byte`                                 | `bytes32`                                   |
+| `eas.UID`                                  | `bytes32`                                   |
+| `[]byte`                                   | `bytes`                                     |
+| `uint8`                                    | `uint8`                                     |
+| `uint16`                                   | `uint16`                                    |
+| `uint32`                                   | `uint32`                                    |
+| `uint64`                                   | `uint64`                                    |
+| `uint256`                                  | `uint256`                                   |
+| `struct{<name> <type>; <name> <type>;...}` | `tuple = (<type> <name>, <type> <name>...)` |
+| `slice = []<type>`                         | `<type>[]`                                  |
+| `array = [<size>]<type>`                   | `<type>[<size>]`                            |
+
+All supported types can be nested inside tuples (Go structs), fixed-sized arrays (Go arrays) and variable-length arrays (So slices).
+
+### Field names
+
+Solidity tuples are represented with Go struct type where names of the struct fields are used for tuple field names. It is possible to set a custom name with Go struct field tag `abi`. En example of a tuple related type:
+
+```go
+type MyTuple struct {
+	ID        eas.UID `abi:"id"`
+	Msg       string  `abi:"message"`
+	Timestamp uint64  `abi:"timeStamp"`
+	RawData   []byte  `abi:"raw_data"`
+	Sender    common.Address
+}
+```
+
+which corresponds to this schema definition:
+
+```solidity
+bytes32 id, string message, uint64 timeStamp, bytes raw_data, address Sender
+```
+
+## Examples
 
 ### Get an existing attestation
 
