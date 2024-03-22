@@ -814,8 +814,8 @@ honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc/go.mod h1:rf3lG4BRIbNafJWh
 honnef.co/go/tools v0.0.1-2019.2.3/go.mod h1:a3bituU0lyd329TUQxRnasdCoJDkEUEAqEt0JzvZhAg=
 honnef.co/go/tools v0.0.1-2020.1.3/go.mod h1:X/FiERA/W4tHapMX5mGpAtMSVEeEUOyHaw9vFzvIQ3k=
 honnef.co/go/tools v0.0.1-2020.1.4/go.mod h1:X/FiERA/W4tHapMX5mGpAtMSVEeEUOyHaw9vFzvIQ3k=
-resenje.org/taint v0.1.4 h1:KO5bsVbEudvKrmyWe2xG2VosUr+Wl21Lk9f6F3Sw3eg=
-resenje.org/taint v0.1.4/go.mod h1:8CjdF+829nEM7rquZB06tCOtsKDhfdN55aSbdVDhOaY=
+resenje.org/taint v0.1.5 h1:VhdmIb232B5DdLdrjpMojHkyBCIuTc7h/d6k75uCYAo=
+resenje.org/taint v0.1.5/go.mod h1:8CjdF+829nEM7rquZB06tCOtsKDhfdN55aSbdVDhOaY=
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=
 rsc.io/quote/v3 v3.1.0/go.mod h1:yEA65RcK8LyAZtP9Kv3t0HmxON59tX3rD+tICJqUlj0=
 rsc.io/sampler v1.3.0/go.mod h1:T1hPZKmBbMNahiBKFy5HrXp6adAjACjK9JXDnKaTXpA=
