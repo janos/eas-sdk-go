@@ -165,7 +165,8 @@ func TestEASContract_FilterAttested(t *testing.T) {
 			assertNilError(t, err)
 
 			var message string
-			a.ScanValues(&message)
+			err = a.ScanValues(&message)
+			assertNilError(t, err)
 
 			assertEqual(t, "message", message, fmt.Sprintf("Hello %v!", count))
 
@@ -210,7 +211,8 @@ loop:
 			assertNilError(t, err)
 
 			var message string
-			a.ScanValues(&message)
+			err = a.ScanValues(&message)
+			assertNilError(t, err)
 
 			assertEqual(t, "message", message, fmt.Sprintf("Hello %v!", count))
 
