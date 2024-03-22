@@ -122,7 +122,7 @@ func scanAttestationValues(data []byte, args ...any) error {
 	}
 
 	for i, arg := range args {
-		if err := taint.Inject(values[i], arg); err != nil {
+		if err := taint.InjectWithTag(values[i], arg, "abi"); err != nil {
 			return fmt.Errorf("inject value for argument %v: %w", i, err)
 		}
 	}
@@ -202,6 +202,8 @@ func getABINewTypeArguments(v any, ty, internalType string, components []abi.Arg
 			e := reflect.Indirect(reflect.New(t.Elem())).Interface()
 			prefix := fmt.Sprintf("[%v]", len)
 			return getABINewTypeArguments(e, prefix+ty, prefix+internalType, components)
+		case reflect.Pointer:
+			return getABINewTypeArguments(reflect.Indirect(reflect.New(t.Elem())).Interface(), ty, internalType, components)
 		default:
 			return "", "", nil, fmt.Errorf("unsupported type %T", v)
 		}

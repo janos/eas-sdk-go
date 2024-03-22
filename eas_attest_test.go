@@ -58,7 +58,7 @@ func TestEASContract_GetAttestation_structured(t *testing.T) {
 
 	type KV struct {
 		Key   string
-		Value string
+		Value string `abi:"somethingStrange"`
 	}
 
 	type Schema struct {

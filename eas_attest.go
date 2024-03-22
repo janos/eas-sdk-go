@@ -47,6 +47,12 @@ func newAttestation(a *contracts.Attestation) *Attestation {
 	}
 }
 
+var zeroTime = time.Unix(0, 0)
+
+func (a Attestation) IsRevoked() bool {
+	return !a.RevocationTime.Equal(zeroTime)
+}
+
 func (a Attestation) ScanValues(fields ...any) error {
 	return scanAttestationValues(a.Data, fields...)
 }

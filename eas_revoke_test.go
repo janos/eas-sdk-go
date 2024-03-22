@@ -25,7 +25,8 @@ func TestEASContract_Revoke(t *testing.T) {
 	a, err := client.EAS.GetAttestation(ctx, attestationUID)
 	assertNilError(t, err)
 
-	assertEqual(t, "revocation time", a.RevocationTime, eas.ZeroTime)
+	assertEqual(t, "is revoked", a.IsRevoked(), false)
+	assertEqual(t, "revocation time", a.RevocationTime, time.Unix(0, 0))
 
 	tx, wait, err := client.EAS.Revoke(ctx, schemaUID, attestationUID, nil)
 	assertNilError(t, err)
@@ -46,6 +47,7 @@ func TestEASContract_Revoke(t *testing.T) {
 	a, err = client.EAS.GetAttestation(ctx, attestationUID)
 	assertNilError(t, err)
 
+	assertEqual(t, "is revoked", a.IsRevoked(), true)
 	if time.Since(a.RevocationTime) > time.Minute {
 		t.Errorf("too old revocation time %v", a.RevocationTime)
 	}
@@ -66,7 +68,8 @@ func TestEASContract_MultiRevoke(t *testing.T) {
 		a, err := client.EAS.GetAttestation(ctx, uid)
 		assertNilError(t, err)
 
-		assertEqual(t, "revocation time", a.RevocationTime, eas.ZeroTime)
+		assertEqual(t, "is revoked", a.IsRevoked(), false)
+		assertEqual(t, "revocation time", a.RevocationTime, time.Unix(0, 0))
 	}
 
 	_, wait, err := client.EAS.MultiRevoke(ctx, schemaUID, []eas.UID{attestationUIDs[2], attestationUIDs[3], attestationUIDs[5]})
@@ -82,11 +85,13 @@ func TestEASContract_MultiRevoke(t *testing.T) {
 		assertNilError(t, err)
 
 		if i == 2 || i == 3 || i == 5 {
+			assertEqual(t, "is revoked", a.IsRevoked(), true)
 			if time.Since(a.RevocationTime) > time.Minute {
 				t.Errorf("too old revocation time %v", a.RevocationTime)
 			}
 		} else {
-			assertEqual(t, "revocation time", a.RevocationTime, eas.ZeroTime)
+			assertEqual(t, "is revoked", a.IsRevoked(), false)
+			assertEqual(t, "revocation time", a.RevocationTime, time.Unix(0, 0))
 		}
 	}
 }
