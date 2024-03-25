@@ -12,12 +12,11 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient/simulated"
 
 	"resenje.org/eas"
-	"resenje.org/eas/internal/deployment"
+	"resenje.org/eas/eastest"
 )
 
 type Client struct {
@@ -39,40 +38,13 @@ func newClient(t testing.TB) *Client {
 
 	accountAddress := crypto.PubkeyToAddress(privateKey.PublicKey)
 
-	sim := simulated.NewBackend(types.GenesisAlloc{
-		accountAddress: {
-			Balance: balance,
-		},
+	sim, easAddress := eastest.NewSimulatedBackend(t, map[common.Address]*big.Int{
+		accountAddress: balance,
 	})
-	t.Cleanup(func() {
-		if err := sim.Close(); err != nil {
-			t.Error(err)
-		}
-	})
-
-	backend := sim.Client()
-
-	// deploy schema registry contract
-	_, _, _, wait, err := deployment.DeploySchemaRegistry(ctx, backend, privateKey)
-	assertNilError(t, err)
-
-	sim.Commit()
-
-	schemaRegistryAddress, err := wait(ctx)
-	assertNilError(t, err)
-
-	// deploy eas contract
-	_, _, _, wait, err = deployment.DeployEAS(ctx, backend, privateKey, schemaRegistryAddress)
-	assertNilError(t, err)
-
-	sim.Commit()
-
-	easAddress, err := wait(ctx)
-	assertNilError(t, err)
 
 	// construct client
 	c, err := eas.NewClient(ctx, "", privateKey, easAddress, &eas.Options{
-		Backend: backend,
+		Backend: sim.Client(),
 	})
 	assertNilError(t, err)
 
@@ -81,6 +53,17 @@ func newClient(t testing.TB) *Client {
 		account: accountAddress,
 		backend: sim,
 	}
+}
+
+func TestClient_Address(t *testing.T) {
+	c := newClient(t)
+
+	var zeroAddress common.Address
+	if c.account == zeroAddress {
+		t.Error("zero address account")
+	}
+
+	assertEqual(t, "address", c.account, c.Address())
 }
 
 func assertEqual[T any](t testing.TB, name string, got, want T) {

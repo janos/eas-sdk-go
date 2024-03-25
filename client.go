@@ -100,6 +100,10 @@ func (c *Client) Backend() Backend {
 	return c.backend
 }
 
+func (c *Client) Address() common.Address {
+	return c.account
+}
+
 func Ptr[T any](v T) *T {
 	return &v
 }
